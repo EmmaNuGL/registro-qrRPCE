@@ -1,44 +1,55 @@
 import React from "react";
-import { getCurrentUser, logoutUser } from "../utils/sessionManager";
+import { useNavigate } from "react-router-dom";
+import { getCurrentUser, clearUser } from "../utils/sessionManager";
 
 export default function Header() {
   const user = getCurrentUser();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearUser();
+    navigate("/login");
+  };
 
   return (
-    <header className="header">
-      <div className="logo">
-        <div className="logo-icon">📋</div>
-        <div>
-          <h1>Sistema de Libros de Registro</h1>
-          <p>Control de Entradas y Salidas con QR</p>
+    <header className="app-header">
+      {/* === LOGO Y TÍTULO === */}
+      <div className="header-left">
+        <div className="logo">
+          <span className="logo-icon">📋</span>
+          <div className="logo-text">
+            <h1>Sistema de Libros de Registro</h1>
+            <p>Control de Entradas y Salidas con Códigos QR</p>
+          </div>
         </div>
       </div>
 
-      <div className="user-info">
-        <div className="user-avatar">
-          {user?.name?.charAt(0).toUpperCase() || "U"}
-        </div>
-        <div>
-          <div>
-            <strong>{user?.name || "Sin usuario"}</strong>
-          </div>
-          <div style={{ fontSize: "12px", color: "#666" }}>En línea</div>
-          {user?.role === "Administrador" && (
-            <select
-              onChange={(e) => {
-                if (e.target.value === "logout") logoutUser();
-              }}
-              style={{
-                fontSize: "11px",
-                marginTop: "5px",
-                padding: "2px",
-              }}
-            >
-              <option value="Administrador">Administrador</option>
-              <option value="logout">Cerrar Sesión</option>
-            </select>
-          )}
-        </div>
+      {/* === USUARIO Y SESIÓN === */}
+      <div className="header-right">
+        {user ? (
+          <>
+            <div className="user-info">
+              <div className="user-avatar">
+                {user?.name?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <div className="user-details">
+                <strong>{user.name}</strong>
+                <div className="user-role">{user.role}</div>
+              </div>
+            </div>
+
+            <button className="btn btn-danger" onClick={handleLogout}>
+              🚪 Cerrar Sesión
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate("/login")}
+          >
+            Iniciar Sesión
+          </button>
+        )}
       </div>
     </header>
   );

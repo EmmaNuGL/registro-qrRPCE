@@ -1,74 +1,59 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { saveUser } from "../utils/sessionManager";
+import "../style-custom.css";
 
 export default function Login() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
-  // Usuarios simulados (por ahora, reemplazables por BD real)
-  const usersDB = [
-    {
-      email: "admin@registro.gob.ec",
-      password: "admin123",
-      role: "Administrador",
-      name: "Administrador del Sistema",
-    },
-    {
-      email: "usuario@registro.gob.ec",
-      password: "user123",
-      role: "Usuario",
-      name: "Usuario Normal",
-    },
-  ];
+  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    const foundUser = usersDB.find(
-      (u) => u.email === email && u.password === password
-    );
 
-    if (!foundUser) {
-      setError("❌ Credenciales incorrectas.");
-      return;
+    // Usuarios base de ejemplo
+    const admin = { user: "admin", pass: "12345", role: "admin", name: "Administrador" };
+    const user = { user: "usuario", pass: "12345", role: "usuario", name: "Usuario" };
+
+    if (username === admin.user && password === admin.pass) {
+      saveUser(admin);
+      navigate("/");
+    } else if (username === user.user && password === user.pass) {
+      saveUser(user);
+      navigate("/biblioteca");
+    } else {
+      setError("Usuario o contraseña incorrectos");
     }
-
-    // Guardar datos de sesión en localStorage
-    localStorage.setItem("user", JSON.stringify(foundUser));
-    alert(`Bienvenido ${foundUser.name} (${foundUser.role})`);
-
-    // Redirigir según el rol
-    if (foundUser.role === "Administrador") navigate("/dashboard");
-    else navigate("/biblioteca");
   };
 
   return (
     <div className="login-container">
-      <h2>📚 Sistema QR — Registro de la Propiedad</h2>
-      <form className="login-form" onSubmit={handleLogin}>
-        <label>Correo institucional</label>
-        <input
-          type="email"
-          placeholder="usuario@registro.gob.ec"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <label>Contraseña</label>
-        <input
-          type="password"
-          placeholder="•••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        {error && <p className="error">{error}</p>}
-        <button type="submit">Iniciar Sesión</button>
-      </form>
-      <footer>
-        <p>© 2025 Registro de la Propiedad del Cantón Esmeraldas</p>
-      </footer>
+      <div className="login-box">
+        <h2>📚 Sistema de Registro QR</h2>
+        <p>Registro de la Propiedad del Cantón Esmeraldas</p>
+
+        <form onSubmit={handleLogin}>
+          <input
+            type="text"
+            placeholder="Usuario"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="submit" className="btn btn-primary">
+            Ingresar
+          </button>
+          {error && <p className="error-msg">{error}</p>}
+        </form>
+      </div>
     </div>
   );
 }

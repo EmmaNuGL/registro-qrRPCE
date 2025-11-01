@@ -1,156 +1,138 @@
-import React, { useState, useEffect } from "react";
-import * as XLSX from "xlsx";
+import React, { useState } from "react";
+import "../style-custom.css";
 
-export default function Configuracion() {
-  const [theme, setTheme] = useState("light");
-  const [storageInfo, setStorageInfo] = useState({
-    totalBooks: 0,
-    totalUsers: 0,
-    totalHistory: 0,
-    usedSpace: 0,
-  });
+export default function Configuracion({ books, users, history, setBooks, setUsers, setHistory }) {
+  const [darkMode, setDarkMode] = useState(false);
+  const [autoCapture, setAutoCapture] = useState(false);
+  const [sound, setSound] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
 
-  // === MODO OSCURO ===
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) setTheme(savedTheme);
-    document.body.className = theme;
-  }, [theme]);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
+  // 🔊 Sonido de detección
+  const playDetectionSound = () => {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    osc.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.value = 800;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
   };
 
-  // === RESPALDO (EXPORTAR DATOS) ===
+  // 📸 Alternar captura automática
+  const toggleAutoCapture = () => {
+    const newState = !autoCapture;
+    setAutoCapture(newState);
+    alert(newState ? "📸 Captura automática activada" : "📸 Captura automática desactivada");
+  };
+
+  // 🔊 Alternar sonido
+  const toggleSound = () => {
+    const newState = !sound;
+    setSound(newState);
+    if (newState) playDetectionSound();
+    alert(newState ? "🔊 Sonido activado" : "🔇 Sonido desactivado");
+  };
+
+  // 🎯 Alternar modo enfoque
+  const toggleFocusMode = () => {
+    const newState = !focusMode;
+    setFocusMode(newState);
+    alert(newState ? "🎯 Modo Enfoque activado - Precisión alta" : "🎯 Modo normal activado");
+  };
+
+  // 🎨 Alternar modo oscuro
+  const toggleDarkMode = () => {
+    const newState = !darkMode;
+    setDarkMode(newState);
+    document.body.classList.toggle("dark-mode", newState);
+    alert(newState ? "🌙 Modo oscuro activado" : "☀️ Modo claro activado");
+  };
+
+  // 💾 Respaldo total
   const backupData = () => {
-    const fakeBackup = {
-      libros: [],
-      usuarios: [],
-      historial: [],
+    const data = {
+      books,
+      users,
+      history,
       fecha: new Date().toLocaleString("es-ES"),
     };
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet([fakeBackup]);
-    XLSX.utils.book_append_sheet(wb, ws, "Respaldo");
-    XLSX.writeFile(wb, "respaldo_registro.xlsx");
-
-    alert("📦 Respaldo generado correctamente (Excel).");
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `respaldo_registro_${new Date().toISOString().split("T")[0]}.json`;
+    link.click();
   };
 
-  // === RESTAURAR DATOS (IMPORTAR) ===
-  const restoreData = (event) => {
-    const file = event.target.files[0];
+  // 📥 Importar respaldo
+  const importBackup = (e) => {
+    const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-      console.log("📂 Datos restaurados:", json);
-      alert("✅ Respaldo importado correctamente (simulación).");
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        setBooks(data.books || []);
+        setUsers(data.users || []);
+        setHistory(data.history || []);
+        alert("✅ Respaldo restaurado correctamente.");
+      } catch (err) {
+        alert("❌ Error al importar respaldo.");
+      }
     };
-    reader.readAsArrayBuffer(file);
+    reader.readAsText(file);
   };
 
-  // === LIMPIAR DATOS ===
-  const clearData = () => {
-    if (
-      window.confirm(
-        "⚠️ Esto eliminará todos los datos almacenados localmente. ¿Deseas continuar?"
-      )
-    ) {
+  // 🧹 Limpiar todo el sistema
+  const clearSystem = () => {
+    if (window.confirm("⚠️ ¿Seguro que deseas limpiar toda la base de datos? Esta acción no se puede deshacer.")) {
       localStorage.clear();
-      alert("🧹 Datos del sistema limpiados correctamente.");
+      setBooks([]);
+      setUsers([]);
+      setHistory([]);
+      alert("🧹 Sistema limpiado correctamente.");
     }
   };
 
-  // === INFORMACIÓN DE ALMACENAMIENTO ===
-  useEffect(() => {
-    const info = {
-      totalBooks: 120,
-      totalUsers: 10,
-      totalHistory: 450,
-      usedSpace: 34,
-    };
-    setStorageInfo(info);
-  }, []);
-
   return (
-    <div className="config-container">
+    <div className="page configuracion">
       <h2>⚙️ Configuración del Sistema</h2>
 
-      {/* === MODO OSCURO === */}
-      <div className="config-section">
-        <h3>🌙 Apariencia</h3>
-        <p>
-          Tema actual: <strong>{theme === "light" ? "Claro" : "Oscuro"}</strong>
-        </p>
-        <button onClick={toggleTheme}>
-          Cambiar a {theme === "light" ? "modo oscuro" : "modo claro"}
-        </button>
-      </div>
-
-      {/* === RESPALDO Y RESTAURACIÓN === */}
-      <div className="config-section">
-        <h3>📦 Respaldo y Restauración</h3>
-        <p>
-          Puedes generar un respaldo completo del sistema o restaurar desde un
-          archivo previo.
-        </p>
-        <div className="action-buttons">
-          <button onClick={backupData}>💾 Generar Respaldo</button>
-          <label className="file-label">
-            📂 Restaurar desde archivo
-            <input type="file" onChange={restoreData} />
+      <div className="config-grid">
+        {/* === PREFERENCIAS DE ESCANEO === */}
+        <div className="config-card">
+          <h3>📸 Escáner QR</h3>
+          <label>
+            <input type="checkbox" checked={autoCapture} onChange={toggleAutoCapture} /> Captura automática
+          </label>
+          <label>
+            <input type="checkbox" checked={sound} onChange={toggleSound} /> Sonido de confirmación
+          </label>
+          <label>
+            <input type="checkbox" checked={focusMode} onChange={toggleFocusMode} /> Modo enfoque
           </label>
         </div>
-      </div>
 
-      {/* === LIMPIAR DATOS === */}
-      <div className="config-section">
-        <h3>🧹 Limpieza de Datos</h3>
-        <p>
-          Elimina toda la información almacenada localmente (útil para pruebas o
-          reinicios del sistema).
-        </p>
-        <button onClick={clearData}>🗑️ Limpiar Datos</button>
-      </div>
+        {/* === INTERFAZ === */}
+        <div className="config-card">
+          <h3>🎨 Interfaz</h3>
+          <label>
+            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} /> Activar modo oscuro
+          </label>
+        </div>
 
-      {/* === INFORMACIÓN DEL SISTEMA === */}
-      <div className="config-section">
-        <h3>📊 Información del Sistema</h3>
-        <table className="info-table">
-          <tbody>
-            <tr>
-              <td>Total de Libros:</td>
-              <td>{storageInfo.totalBooks}</td>
-            </tr>
-            <tr>
-              <td>Total de Usuarios:</td>
-              <td>{storageInfo.totalUsers}</td>
-            </tr>
-            <tr>
-              <td>Total de Registros en Historial:</td>
-              <td>{storageInfo.totalHistory}</td>
-            </tr>
-            <tr>
-              <td>Espacio utilizado (estimado):</td>
-              <td>{storageInfo.usedSpace}%</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        {/* === RESPALDO === */}
+        <div className="config-card">
+          <h3>💾 Respaldo y Restauración</h3>
+          <button className="btn btn-primary" onClick={backupData}>💾 Exportar respaldo</button>
+          <input type="file" accept=".json" onChange={importBackup} style={{ marginTop: "10px" }} />
+        </div>
 
-      {/* === CREDITOS === */}
-      <div className="config-section footer">
-        <p>
-          Sistema desarrollado para el Registro de la Propiedad del Cantón
-          Esmeraldas — Proyecto de Tesis (2025)
-        </p>
+        {/* === LIMPIEZA === */}
+        <div className="config-card">
+          <h3>🧹 Mantenimiento</h3>
+          <button className="btn btn-danger" onClick={clearSystem}>🧹 Limpiar todo el sistema</button>
+        </div>
       </div>
     </div>
   );

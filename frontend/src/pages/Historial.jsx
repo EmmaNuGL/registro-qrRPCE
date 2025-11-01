@@ -1,182 +1,124 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function Historial() {
   const [history, setHistory] = useState([]);
-  const [search, setSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [actionFilter, setActionFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState("todos");
 
-  // === FILTRAR HISTORIAL ===
-  const filteredHistory = history.filter((entry) => {
-    const matchSearch =
-      entry.book?.toLowerCase().includes(search.toLowerCase()) ||
-      entry.user?.toLowerCase().includes(search.toLowerCase()) ||
-      entry.personName?.toLowerCase().includes(search.toLowerCase()) ||
-      entry.actionNotes?.toLowerCase().includes(search.toLowerCase());
+  // 🧠 Cargar historial desde la base de datos
+  const loadHistory = async () => {
+    try {
+      const { data } = await axios.get("http://localhost:4000/api/history");
+      setHistory(data.reverse());
+    } catch (error) {
+      console.error("Error al cargar historial:", error);
+    }
+  };
 
-    const matchAction =
-      !actionFilter || entry.action?.toLowerCase() === actionFilter.toLowerCase();
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
-    const entryDate = new Date(entry.date);
-    const from = dateFrom ? new Date(dateFrom) : null;
-    const to = dateTo ? new Date(dateTo) : null;
-    const matchDate =
-      (!from || entryDate >= from) && (!to || entryDate <= to);
-
-    return matchSearch && matchAction && matchDate;
+  // 🔍 Filtrar resultados
+  const filteredHistory = history.filter((h) => {
+    const textMatch =
+      h.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (h.action && h.action.toLowerCase().includes(searchTerm.toLowerCase()));
+    const typeMatch = filter === "todos" || h.action.includes(filter);
+    return textMatch && typeMatch;
   });
 
-  // === FUNCIONES ===
-  const refreshHistory = () => {
-    alert("🔄 Refrescando historial (pendiente conexión backend).");
-  };
-
-  const toggleSearch = () => setShowSearch(!showSearch);
-
+  // 📤 Exportar a Excel
   const exportToExcel = () => {
-    if (!history.length) return alert("No hay datos para exportar.");
-    const exportData = history.map((entry) => ({
-      Fecha: new Date(entry.date).toLocaleDateString(),
-      Hora: new Date(entry.date).toLocaleTimeString(),
-      Libro: entry.book,
-      Acción: entry.action,
-      Usuario: entry.user,
-      "Estado Anterior": entry.oldStatus || "",
-      "Estado Nuevo": entry.newStatus || "",
-      Persona: entry.personName || "",
-      Observaciones: entry.actionNotes || "",
-    }));
-
+    const ws = XLSX.utils.json_to_sheet(filteredHistory);
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
     XLSX.utils.book_append_sheet(wb, ws, "Historial");
-    XLSX.writeFile(wb, `historial_registro_${new Date().toISOString().split("T")[0]}.xlsx`);
-    alert("✅ Historial exportado a Excel correctamente.");
+    XLSX.writeFile(wb, "Historial_Movimientos.xlsx");
   };
 
+  // 📄 Exportar a PDF
   const exportToPDF = () => {
-    if (!history.length) return alert("No hay datos para exportar.");
-    const doc = new jsPDF("l", "mm", "a4");
-
-    doc.setFontSize(18);
-    doc.text("Historial de Movimientos", 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Generado: ${new Date().toLocaleString("es-ES")}`, 20, 30);
-    doc.text(`Total de registros: ${history.length}`, 20, 40);
-
-    doc.setFontSize(10);
-    let y = 55;
-    filteredHistory.slice(0, 25).forEach((entry, index) => {
-      doc.text(
-        `${index + 1}. ${entry.book} | ${entry.action} | ${entry.user || "—"} | ${entry.personName || ""}`,
-        20,
-        y
-      );
-      y += 7;
+    const doc = new jsPDF();
+    doc.text("Historial de Movimientos - Registro de la Propiedad", 14, 15);
+    const tableData = filteredHistory.map((h) => [
+      h.code,
+      h.action,
+      h.user || "Administrador",
+      h.date,
+    ]);
+    doc.autoTable({
+      head: [["Código", "Acción", "Usuario", "Fecha y Hora"]],
+      body: tableData,
+      startY: 25,
     });
-
-    doc.save(`historial_registro_${new Date().toISOString().split("T")[0]}.pdf`);
-    alert("📄 PDF generado correctamente.");
+    doc.save("Historial_Movimientos.pdf");
   };
 
-  // === INTERFAZ ===
   return (
-    <div className="history-container">
+    <div className="historial-container">
       <h2>📜 Historial de Movimientos</h2>
 
-      {/* === BOTONES PRINCIPALES === */}
-      <div className="action-buttons">
-        <button onClick={refreshHistory}>🔄 Refrescar</button>
-        <button onClick={exportToExcel}>📊 Exportar Excel</button>
-        <button onClick={exportToPDF}>📄 Exportar PDF</button>
-        <button onClick={toggleSearch}>🔍 Buscar</button>
+      {/* Barra de búsqueda */}
+      <div className="filter-bar">
+        <input
+          type="text"
+          placeholder="Buscar por código o acción..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="todos">Todos</option>
+          <option value="Préstamo">Préstamos</option>
+          <option value="Devolución">Devoluciones</option>
+        </select>
+        <button onClick={exportToExcel} className="btn btn-success">
+          📗 Exportar Excel
+        </button>
+        <button onClick={exportToPDF} className="btn btn-danger">
+          📄 Exportar PDF
+        </button>
       </div>
 
-      {/* === FILTROS === */}
-      {showSearch && (
-        <div className="filters-panel">
-          <input
-            type="text"
-            placeholder="Buscar por libro, observación o usuario..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="filter-row">
-            <div>
-              <label>Desde:</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>Hasta:</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>Acción:</label>
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-              >
-                <option value="">Todas</option>
-                <option value="Prestado">Prestado</option>
-                <option value="Devuelto a archivo">Devuelto a archivo</option>
-                <option value="Registro">Registro</option>
-                <option value="Actualización">Actualización</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* === TABLA DE HISTORIAL === */}
-      <div className="table-container">
-        <table className="history-table">
+      {/* Tabla de historial */}
+      <div className="historial-table">
+        <table>
           <thead>
             <tr>
-              <th>Fecha/Hora</th>
-              <th>Libro</th>
-              <th>Usuario</th>
-              <th>Estado Anterior</th>
-              <th>Estado Nuevo</th>
+              <th>Código</th>
               <th>Acción</th>
-              <th>Persona</th>
-              <th>Observaciones</th>
+              <th>Usuario</th>
+              <th>Fecha y Hora</th>
             </tr>
           </thead>
           <tbody>
-            {filteredHistory.length > 0 ? (
-              filteredHistory.map((entry, idx) => (
-                <tr key={idx}>
-                  <td>
-                    {new Date(entry.date).toLocaleDateString("es-ES")}{" "}
-                    {new Date(entry.date).toLocaleTimeString("es-ES")}
-                  </td>
-                  <td>{entry.book}</td>
-                  <td>{entry.user}</td>
-                  <td>{entry.oldStatus}</td>
-                  <td>{entry.newStatus}</td>
-                  <td>{entry.action}</td>
-                  <td>{entry.personName}</td>
-                  <td>{entry.actionNotes}</td>
-                </tr>
-              ))
-            ) : (
+            {filteredHistory.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: "center" }}>
-                  Sin registros disponibles.
+                <td colSpan="4" className="no-results">
+                  No hay movimientos registrados.
                 </td>
               </tr>
+            ) : (
+              filteredHistory.map((h, i) => (
+                <tr
+                  key={i}
+                  className={
+                    h.action.includes("Préstamo")
+                      ? "row-prestamo"
+                      : h.action.includes("Devolución")
+                      ? "row-devolucion"
+                      : "row-otros"
+                  }
+                >
+                  <td>{h.code}</td>
+                  <td>{h.action}</td>
+                  <td>{h.user || "Administrador"}</td>
+                  <td>{h.date}</td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
