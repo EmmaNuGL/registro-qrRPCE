@@ -1,17 +1,52 @@
-import { NavLink } from 'react-router-dom';
+import React from "react";
+import { Link } from "react-router-dom";
+import { getCurrentUser } from "../utils/sessionManager";
 
-const linkBase = { display:'block', padding:'10px 14px', borderRadius:8, textDecoration:'none', margin:'6px 0' };
+export default function Sidebar() {
+  const user = getCurrentUser();
 
-export default function Sidebar(){
+  if (!user) return null;
+
+  const isAdmin = user.role === "Administrador";
+
   return (
-    <aside style={{background:'#f3f6fb', padding:'1rem', borderRight:'1px solid #e5e7eb'}}>
-      <div style={{fontWeight:700, marginBottom:12}}>Menú</div>
-      <NavLink to="/libros"     style={linkBase}>📚 Gestión de Libros</NavLink>
-      <NavLink to="/scanner"    style={linkBase}>📷 Escáner QR</NavLink>
-      <NavLink to="/historial"  style={linkBase}>🕘 Historial</NavLink>
-      <NavLink to="/reportes"   style={linkBase}>📑 Reportes</NavLink>
-      <NavLink to="/usuarios"   style={linkBase}>👥 Usuarios</NavLink>
-      <NavLink to="/config"     style={linkBase}>⚙️ Configuración</NavLink>
+    <aside className="sidebar">
+      {isAdmin ? (
+        <>
+          <div className="nav-item">
+            <Link to="/dashboard">📊 Panel Principal</Link>
+          </div>
+          <div className="nav-item">
+            <Link to="/scanner">📱 Escaneo QR</Link>
+          </div>
+          <div className="nav-item">
+            <Link to="/libros">📖 Gestión de Libros</Link>
+          </div>
+          <div className="nav-item">
+            <Link to="/historial">📋 Historial</Link>
+          </div>
+          <div className="nav-item">
+            <Link to="/reportes">📄 Reportes</Link>
+          </div>
+          <div className="nav-item">
+            <Link to="/usuarios">👥 Usuarios</Link>
+          </div>
+          <div className="nav-item">
+            <Link to="/configuracion">⚙️ Configuración</Link>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="nav-item">
+            <Link to="/biblioteca">📚 Biblioteca 2D (Solo Lectura)</Link>
+          </div>
+          <div className="user-alert">
+            <p>
+              <strong>👤 Usuario Normal:</strong> Solo lectura
+            </p>
+          </div>
+        </>
+      )}
     </aside>
   );
 }
