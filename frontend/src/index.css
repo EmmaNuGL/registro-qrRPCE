@@ -1,0 +1,171 @@
+:root {
+  --color-bg: #f9f9f9;
+  --color-card: #ffffff;
+  --color-text: #222;
+  --color-accent: #004aad; /* Azul institucional */
+  --color-accent-hover: #003a8b;
+  --color-border: #ccc;
+  --shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3 {
+  color: var(--color-accent);
+  margin-bottom: 0.5em;
+}
+
+button {
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 0.6em 1.2em;
+  cursor: pointer;
+  transition: 0.3s;
+  font-weight: 600;
+}
+
+button:hover {
+  background: var(--color-accent-hover);
+}
+
+input, select {
+  width: 100%;
+  padding: 0.6em;
+  margin-bottom: 0.8em;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 1em;
+  outline: none;
+}
+
+input:focus, select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 3px var(--color-accent);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--color-card);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 2em;
+  width: 400px;
+  max-width: 90%;
+  animation: fadeIn 0.3s ease;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1em;
+}
+
+img {
+  display: block;
+  margin: 1em auto;
+  border: 1px solid var(--color-border);
+  padding: 5px;
+  border-radius: 6px;
+  background: white;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* ======= ENCABEZADO ======= */
+.header {
+  background: var(--color-accent);
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.header-logo {
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.header-nav button {
+  background: transparent;
+  color: white;
+  font-weight: 600;
+  border: none;
+  margin-left: 1rem;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.header-nav button:hover {
+  color: #aee0ff;
+}
+
+/* ======= CONTENIDO PRINCIPAL ======= */
+.main-content {
+  padding: 2rem;
+  max-width: 1000px;
+  margin: auto;
+}
+
+/* ======= TARJETAS DE LIBROS ======= */
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.book-card {
+  background: var(--color-card);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  border-radius: 10px;
+  transition: transform 0.2s;
+}
+
+.book-card:hover {
+  transform: translateY(-4px);
+}
+
+.book-card h3 {
+  color: var(--color-accent);
+  margin-bottom: 0.5rem;
+}
+
+.book-status {
+  font-weight: bold;
+  margin-top: 0.5rem;
+}
+
+.book-status.en_uso {
+  color: #e63946;
+}
+
+.book-status.archivado {
+  color: #2a9d8f;
+}

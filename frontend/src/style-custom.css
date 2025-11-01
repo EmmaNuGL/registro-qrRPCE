@@ -1,0 +1,334 @@
+/* ===== ESTILO GENERAL ===== */
+body {
+  background-color: #eef2f3;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #1f1f1f;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== TARJETAS ===== */
+.book-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fc 100%);
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  padding: 1rem 1.2rem;
+  transition: all 0.25s ease;
+  position: relative;
+  border: 2px solid transparent;
+}
+
+.book-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== EFECTO ENTRADA ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== BOTONES ===== */
+button {
+  background: linear-gradient(135deg, #1e90ff, #006ad4);
+  color: white;
+  font-weight: 600;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+button:hover {
+  background: linear-gradient(135deg, #006ad4, #004a9f);
+  transform: scale(1.03);
+}
+
+/* ===== MODALES ===== */
+.modal {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 420px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal input, .modal select {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.6rem;
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+.modal img {
+  display: block;
+  margin: 1rem auto;
+  width: 150px;
+  height: 150px;
+  border-radius: 6px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+/* ===== QR MODAL ===== */
+.qr-modal {
+  width: 340px;
+  text-align: center;
+}
+
+.qr-modal h2 {
+  color: var(--color-accent);
+  font-size: 1.1rem;
+}
+
+.qr-modal img {
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.qr-modal .actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* ===== BOTONES DENTRO DE TARJETA ===== */
+.book-actions {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.book-actions button {
+  background: #1e90ff;
+  border: none;
+  color: white;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  margin: 3px;
+  cursor: pointer;
+}
+
+.book-actions button:hover {
+  background: #004aad;
+  transform: scale(1.05);
+}
+
+/* ===== BOTÓN EXTRA (5to, gris) ===== */
+.book-actions button:nth-child(5) {
+  background: #f1f1f1;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+/* ===== ETIQUETAS DE ESTADO ===== */
+.book-status span {
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+  color: white;
+}
+
+/* ===== COLORES POR ESTADO ===== */
+.status-en_uso {
+  background: linear-gradient(180deg, #fff5f5 0%, #ffeaea 100%);
+  border: 2px solid #ff4d4f;
+}
+
+.status-en_archivos {
+  background: linear-gradient(180deg, #e3fcec 0%, #c6f6d5 100%);
+  border: 2px solid #2a9d8f;
+}
+
+.status-disponible {
+  border-color: #1e90ff;
+  background: linear-gradient(180deg, #e3f2ff 0%, #c9e6ff 100%);
+}
+
+.status-en_uso:hover,
+.status-en_archivos:hover,
+.status-disponible:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* 💡 OPCIÓN VERDE COMPLETA PARA ARCHIVADO */
+.status-archivado {
+  background-color: #d4f6df !important;
+  border: 2px solid #2a9d8f;
+  box-shadow: 0 3px 10px rgba(42, 157, 143, 0.25);
+}
+
+.status-archivado:hover {
+  background-color: #b8f0c7 !important;
+  box-shadow: 0 5px 15px rgba(42, 157, 143, 0.4);
+}
+
+/* ===== FRANJA SUPERIOR DE COLOR ===== */
+.book-card::before {
+  content: '';
+  display: block;
+  height: 6px;
+  border-radius: 10px 10px 0 0;
+  margin: -1rem -1.2rem 1rem -1.2rem;
+}
+
+.status-en_uso::before {
+  background: #ff4d4f;
+}
+
+.status-en_archivos::before,
+.status-archivado::before {
+  background: #2a9d8f;
+}
+
+.status-disponible::before {
+  background: #1e90ff;
+}
+
+/* ===== BARRA DE HERRAMIENTAS ===== */
+.books-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: #f1f5f9;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.books-toolbar input {
+  flex: 1;
+  min-width: 250px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.books-toolbar select {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+}
+
+.book-counter {
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.no-results {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+/* ===== BOTÓN MORADO ===== */
+.btn.btn-purple {
+  background: linear-gradient(45deg, #9c27b0, #673ab7);
+  color: white;
+}
+
+/* ===== FILTRO DE RANGO ===== */
+.range-filter-container {
+  background: #e3f2fd;
+  padding: 15px;
+  border-radius: 10px;
+  margin: 15px 0;
+  border-left: 4px solid #2196f3;
+}
+
+/* ===== MODAL ACTIVO ===== */
+.modal.active {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 25px;
+  border-radius: 10px;
+  width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+.qr-display {
+  text-align: center;
+  margin: 15px 0;
+}
+
+.qr-data {
+  background: #eaeaea;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.modal-content h3 {
+  color: #2196f3;
+  margin-bottom: 10px;
+}
+
+/* ===== BOTÓN ROJO ELIMINAR ===== */
+button.btn-danger,
+.book-actions button:nth-child(4) {
+  background: linear-gradient(45deg, #ff5252, #d32f2f);
+  color: white;
+  border: none;
+  transition: transform 0.2s;
+}
+
+button.btn-danger:hover {
+  transform: scale(1.05);
+}
+.history-container {
+  padding: 20px;
+}
+.filters-panel {
+  background: #f3f6f9;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+.filters-panel input,
+.filters-panel select {
+  margin: 5px;
+  padding: 5px;
+}
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.history-table th {
+  background: #667eea;
+  color: white;
+  padding: 10px;
+}
+.history-table td {
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
+}
+.table-container {
+  overflow-x: auto;
+}
