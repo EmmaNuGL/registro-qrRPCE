@@ -1,8 +1,8 @@
+// src/App.jsx
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import { getCurrentUser } from "./utils/sessionManager";
-import { logoutUser } from "./utils/sessionManager";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./components/Dashboard";
 import Libros from "./pages/Libros";
@@ -14,12 +14,15 @@ import Scanner from "./pages/Scanner";
 import Biblioteca from "./pages/Biblioteca";
 
 export default function App() {
+  const user = getCurrentUser();
+
   return (
     <BrowserRouter>
       <Routes>
+        {/* === PÁGINA DE LOGIN === */}
         <Route path="/login" element={<Login />} />
 
-        {/* Admin */}
+        {/* === RUTAS ADMINISTRADOR === */}
         <Route
           path="/"
           element={
@@ -37,7 +40,7 @@ export default function App() {
           <Route path="scanner" element={<Scanner />} />
         </Route>
 
-        {/* Usuario normal */}
+        {/* === RUTA USUARIO NORMAL === */}
         <Route
           path="/biblioteca"
           element={
@@ -47,7 +50,11 @@ export default function App() {
           }
         />
 
-        <Route path="*" element={<Login />} />
+        {/* === REDIRECCIÓN POR DEFECTO === */}
+        <Route
+          path="*"
+          element={user ? <DashboardLayout /> : <Login />}
+        />
       </Routes>
     </BrowserRouter>
   );

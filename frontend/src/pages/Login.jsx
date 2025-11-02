@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser } from "../utils/sessionManager"; // 🔹 corregido
+import { saveUser } from "../utils/sessionManager"; // ✅ corregido
 import "../style-custom.css";
 
 export default function Login() {
@@ -12,28 +12,28 @@ export default function Login() {
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // Usuarios base de ejemplo (puedes conectar luego con tu base de datos)
+    // ✅ Usuarios base (puedes conectar luego con tu backend o DB)
     const admin = {
       user: "admin",
       pass: "12345",
-      role: "Administrador",
+      role: "admin", // 🔹 en minúsculas, coincide con ProtectedRoute
       name: "Administrador del sistema",
     };
 
     const user = {
       user: "usuario",
       pass: "12345",
-      role: "Usuario",
+      role: "usuario", // 🔹 en minúsculas también
       name: "Usuario estándar",
     };
 
-    // 🔹 Validación de login
+    // ✅ Validación de inicio de sesión
     if (username === admin.user && password === admin.pass) {
-      loginUser(admin);
-      navigate("/"); // Dashboard
+      saveUser(admin);
+      navigate("/"); // Panel principal
     } else if (username === user.user && password === user.pass) {
-      loginUser(user);
-      navigate("/biblioteca"); // Solo vista de biblioteca
+      saveUser(user);
+      navigate("/biblioteca"); // Vista del usuario normal
     } else {
       setError("Usuario o contraseña incorrectos");
     }

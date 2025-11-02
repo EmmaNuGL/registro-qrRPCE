@@ -1,7 +1,7 @@
 // src/utils/sessionManager.js
 
 // Guarda la sesión del usuario actual
-export const loginUser = (user) => {
+export const saveUser = (user) => {
   localStorage.setItem("userSession", JSON.stringify(user));
 };
 
@@ -11,14 +11,14 @@ export const getCurrentUser = () => {
   return data ? JSON.parse(data) : null;
 };
 
-// Cierra sesión y redirige
+// Cierra sesión
 export const logoutUser = () => {
   localStorage.removeItem("userSession");
-  window.location.href = "/"; // redirige al inicio o login
 };
 
 // Verifica si el usuario actual es administrador
 export const isAdmin = () => {
   const user = getCurrentUser();
-  return user && (user.role === "Administrador" || user.role === "admin");
+  // Acepta ambos formatos de rol por compatibilidad
+  return user && (user.role === "admin" || user.role === "Administrador");
 };
