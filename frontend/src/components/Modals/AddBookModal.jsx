@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import QRCode from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react"; // ✅ Corrección clave: uso del export correcto
 
 export default function AddBookModal({ show, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -15,11 +15,13 @@ export default function AddBookModal({ show, onClose, onSave }) {
   const [qrData, setQrData] = useState("");
   const [showQR, setShowQR] = useState(false);
 
+  // Manejar cambios de campos
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
+  // Generar QR
   const handleGenerateQR = () => {
     if (!formData.year || !formData.tome || !formData.registryFrom || !formData.registryTo) {
       alert("⚠️ Todos los campos principales son obligatorios");
@@ -30,6 +32,7 @@ export default function AddBookModal({ show, onClose, onSave }) {
     setShowQR(true);
   };
 
+  // Descargar QR
   const handleDownloadQR = () => {
     const canvas = document.querySelector("#qrCanvasModal canvas");
     if (!canvas) return;
@@ -39,10 +42,11 @@ export default function AddBookModal({ show, onClose, onSave }) {
     link.click();
   };
 
+  // Guardar libro
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!qrData) {
-      alert("Genera el código QR antes de guardar");
+      alert("⚠️ Genera el código QR antes de guardar");
       return;
     }
     onSave({ ...formData, qr: qrData });
@@ -148,10 +152,11 @@ export default function AddBookModal({ show, onClose, onSave }) {
             />
           </div>
 
+          {/* ✅ QR GENERADO */}
           {showQR && (
             <div id="qrCanvasModal" className="qr-display">
               <h4>Vista previa del QR:</h4>
-              <QRCode value={qrData} size={160} />
+              <QRCodeCanvas value={qrData} size={160} /> {/* ✅ Componente corregido */}
               <p>
                 <strong>Código:</strong>{" "}
                 <span className="qr-data">{qrData}</span>

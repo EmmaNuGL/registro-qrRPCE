@@ -1,7 +1,7 @@
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import { getCurrentUser } from "./utils/sessionManager";
-import { clearUser } from "./utils/sessionManager";
+import { logoutUser } from "./utils/sessionManager";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./components/Dashboard";

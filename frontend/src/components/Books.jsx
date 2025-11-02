@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
-import QRCode from "qrcode.react";
+import React, { useState } from "react";
+import { QRCodeCanvas } from "qrcode.react"; // ✅ Corrección: uso correcto del componente
 import AddBookModal from "./modals/AddBookModal";
 import EditBookModal from "./modals/EditBookModal";
 import ViewQRModal from "./modals/ViewQRModal";
 
 export default function Books() {
-  // === ESTADOS PRINCIPALES ===
   const [books, setBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
@@ -68,23 +67,31 @@ export default function Books() {
 
   // === FUNCIÓN: DESCARGAR QR ===
   const handleDownloadQR = (book) => {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const size = 200;
-    canvas.width = size;
-    canvas.height = size;
-    const qr = document.createElement("div");
-    const qrTemp = document.createElement("div");
+    // Creamos un canvas temporal para renderizar el QR
     const qrCanvas = document.createElement("canvas");
-    const qrCode = new QRCode(qrTemp, { text: book.qr, width: size, height: size });
+    const tempDiv = document.createElement("div");
+    tempDiv.style.position = "absolute";
+    tempDiv.style.left = "-9999px";
+    document.body.appendChild(tempDiv);
+
+    const qrCode = (
+      <QRCodeCanvas value={book.qr} size={200} includeMargin={true} />
+    );
+
+    // Renderizamos temporalmente el QR en el DOM oculto
+    const qrEl = document.createElement("div");
+    tempDiv.appendChild(qrEl);
+    const ctx = qrCanvas.getContext("2d");
     const img = new Image();
     img.src = qrCanvas.toDataURL();
+
     img.onload = () => {
-      ctx.drawImage(img, 0, 0, size, size);
+      ctx.drawImage(img, 0, 0);
       const link = document.createElement("a");
       link.download = `${book.tome}-${book.year}.png`;
-      link.href = canvas.toDataURL();
+      link.href = qrCanvas.toDataURL();
       link.click();
+      document.body.removeChild(tempDiv);
     };
   };
 
@@ -113,15 +120,9 @@ export default function Books() {
     alert("📚 Vista 2D (pendiente integrar con componente 3D Canvas).");
   };
 
-  const handleYearFilter = (year) => {
-    if (!year) return setFilterStatus("todos");
-    setFilterStatus(year);
-  };
-
   // === INTERFAZ VISUAL ===
   return (
     <div className="books-container">
-
       {/* === BARRA DE BÚSQUEDA Y FILTROS === */}
       <div className="books-toolbar">
         <input
@@ -146,7 +147,7 @@ export default function Books() {
       {/* === BOTONES DE ACCIÓN === */}
       <div className="action-buttons">
         <button onClick={() => setShowAddModal(true)}>➕ Agregar Libro</button>
-        <button onClick={() => showLibrary2D()}>📚 Vista Biblioteca 2D</button>
+        <button onClick={showLibrary2D}>📚 Vista Biblioteca 2D</button>
         <button onClick={handleExportBooks}>📤 Exportar Lista</button>
         <button onClick={handleImportBooks}>📥 Importar Lote</button>
       </div>
@@ -164,8 +165,7 @@ export default function Books() {
               <h3>{b.type || `Libro ${b.tome}`}</h3>
               <p><strong>Año:</strong> {b.year}</p>
               <p>
-                <strong>Desde:</strong> {b.registryFrom} — <strong>Hasta:</strong>{" "}
-                {b.registryTo}
+                <strong>Desde:</strong> {b.registryFrom} — <strong>Hasta:</strong> {b.registryTo}
               </p>
               <p><strong>Estado:</strong> {b.status}</p>
 
@@ -198,10 +198,7 @@ export default function Books() {
         onSave={handleSaveEdit}
       />
       {viewingBook && (
-        <ViewQRModal
-          book={viewingBook}
-          onClose={() => setViewingBook(null)}
-        />
+        <ViewQRModal book={viewingBook} onClose={() => setViewingBook(null)} />
       )}
     </div>
   );

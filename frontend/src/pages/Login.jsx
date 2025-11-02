@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { saveUser } from "../utils/sessionManager";
+import { loginUser } from "../utils/sessionManager"; // 🔹 corregido
 import "../style-custom.css";
 
 export default function Login() {
@@ -12,16 +12,28 @@ export default function Login() {
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // Usuarios base de ejemplo
-    const admin = { user: "admin", pass: "12345", role: "admin", name: "Administrador" };
-    const user = { user: "usuario", pass: "12345", role: "usuario", name: "Usuario" };
+    // Usuarios base de ejemplo (puedes conectar luego con tu base de datos)
+    const admin = {
+      user: "admin",
+      pass: "12345",
+      role: "Administrador",
+      name: "Administrador del sistema",
+    };
 
+    const user = {
+      user: "usuario",
+      pass: "12345",
+      role: "Usuario",
+      name: "Usuario estándar",
+    };
+
+    // 🔹 Validación de login
     if (username === admin.user && password === admin.pass) {
-      saveUser(admin);
-      navigate("/");
+      loginUser(admin);
+      navigate("/"); // Dashboard
     } else if (username === user.user && password === user.pass) {
-      saveUser(user);
-      navigate("/biblioteca");
+      loginUser(user);
+      navigate("/biblioteca"); // Solo vista de biblioteca
     } else {
       setError("Usuario o contraseña incorrectos");
     }
@@ -41,6 +53,7 @@ export default function Login() {
             onChange={(e) => setUsername(e.target.value)}
             required
           />
+
           <input
             type="password"
             placeholder="Contraseña"
@@ -48,9 +61,11 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+
           <button type="submit" className="btn btn-primary">
             Ingresar
           </button>
+
           {error && <p className="error-msg">{error}</p>}
         </form>
       </div>

@@ -1,13 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { getCurrentUser, clearUser } from "../utils/sessionManager";
+import { getCurrentUser, logoutUser } from "../utils/sessionManager"; // ✅ Corregido
 
 export default function Header() {
   const user = getCurrentUser();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    clearUser();
+    logoutUser(); // ✅ antes decía clearUser()
     navigate("/login");
   };
 
