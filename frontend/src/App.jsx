@@ -1,60 +1,62 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
-import { getCurrentUser } from "./utils/sessionManager";
-import DashboardLayout from "./layouts/DashboardLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import DashboardLayout from "./layouts/DashboardLayout"; // Layout del administrador
+import UserLayout from "./layouts/UserLayout"; // Layout del usuario normal
+
+// Admin pages
 import Dashboard from "./components/Dashboard";
+import Scanner from "./pages/Scanner";
 import Libros from "./pages/Libros";
 import Historial from "./pages/Historial";
 import Reportes from "./pages/Reportes";
 import Usuarios from "./pages/Usuarios";
 import Configuracion from "./pages/Configuracion";
-import Scanner from "./pages/Scanner";
-import Biblioteca from "./pages/Biblioteca";
+import Biblioteca2D from "./pages/Biblioteca2D"; // vista de solo lectura para admin
+
+// User pages
+import Biblioteca from "./pages/Biblioteca"; // solo lectura
 
 export default function App() {
-  const user = getCurrentUser();
-
   return (
     <BrowserRouter>
       <Routes>
-        {/* === PÁGINA DE LOGIN === */}
+        {/* LOGIN */}
         <Route path="/login" element={<Login />} />
 
-        {/* === RUTAS ADMINISTRADOR === */}
+        {/* === ADMIN === */}
         <Route
-          path="/"
+          path="/admin"
           element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute allowedRoles={["Administrador", "admin"]}>
               <DashboardLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="escaneo" element={<Scanner />} />
           <Route path="libros" element={<Libros />} />
           <Route path="historial" element={<Historial />} />
           <Route path="reportes" element={<Reportes />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="configuracion" element={<Configuracion />} />
-          <Route path="scanner" element={<Scanner />} />
+          <Route path="biblioteca-2d" element={<Biblioteca2D />} />
         </Route>
 
-        {/* === RUTA USUARIO NORMAL === */}
+        {/* === USUARIO NORMAL === */}
         <Route
-          path="/biblioteca"
+          path="/u"
           element={
-            <ProtectedRoute requiredRole="usuario">
-              <Biblioteca />
+            <ProtectedRoute allowedRoles={["Usuario", "usuario"]}>
+              <UserLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Biblioteca />} />
+        </Route>
 
-        {/* === REDIRECCIÓN POR DEFECTO === */}
-        <Route
-          path="*"
-          element={user ? <DashboardLayout /> : <Login />}
-        />
+        {/* RUTA POR DEFECTO */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );

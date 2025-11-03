@@ -1,50 +1,62 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { getCurrentUser } from "../utils/sessionManager";
 
-export default function Sidebar() {
+const Item = ({ to, icon, children }) => (
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
+      "nav-item" + (isActive ? " active" : "")
+    }
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "10px 12px",
+      borderRadius: 12,
+      color: "#1f2937",
+      textDecoration: "none",
+      fontWeight: 600
+    }}
+  >
+    <span style={{ width: 22, textAlign: "center" }}>{icon}</span>
+    <span>{children}</span>
+  </NavLink>
+);
+
+export default function Sidebar({ variant = "admin" }) {
   const user = getCurrentUser();
+  const isAdmin = user?.role === "Administrador" || user?.role === "admin";
 
-  if (!user) return null;
-
-  const isAdmin = user.role === "Administrador";
+  const base = isAdmin ? "/admin" : "/u";
 
   return (
-    <aside className="sidebar">
+    <aside
+      className="sidebar"
+      style={{
+        background: "linear-gradient(180deg,#f2f4ff,#f5f0ff)",
+        borderRight: "1px solid #e9ecef",
+        padding: 16
+      }}
+    >
       {isAdmin ? (
         <>
-          <div className="nav-item">
-            <Link to="/dashboard">📊 Panel Principal</Link>
-          </div>
-          <div className="nav-item">
-            <Link to="/scanner">📱 Escaneo QR</Link>
-          </div>
-          <div className="nav-item">
-            <Link to="/libros">📖 Gestión de Libros</Link>
-          </div>
-          <div className="nav-item">
-            <Link to="/historial">📋 Historial</Link>
-          </div>
-          <div className="nav-item">
-            <Link to="/reportes">📄 Reportes</Link>
-          </div>
-          <div className="nav-item">
-            <Link to="/usuarios">👥 Usuarios</Link>
-          </div>
-          <div className="nav-item">
-            <Link to="/configuracion">⚙️ Configuración</Link>
-          </div>
+          <Item to={`${base}`}>📊 Panel Principal</Item>
+          <Item to={`${base}/escaneo`}>📱 Escaneo QR</Item>
+          <Item to={`${base}/libros`}>📚 Gestión de Libros</Item>
+          <Item to={`${base}/historial`}>🕒 Historial</Item>
+          <Item to={`${base}/reportes`}>📈 Reportes</Item>
+          <Item to={`${base}/usuarios`}>👥 Usuarios</Item>
+          <Item to={`${base}/configuracion`}>⚙️ Configuración</Item>
+          <div style={{ height: 12 }} />
+          <Item to={`${base}/biblioteca-2d`}>📖 Biblioteca 2D (Solo lectura)</Item>
         </>
       ) : (
         <>
-          <div className="nav-item">
-            <Link to="/biblioteca">📚 Biblioteca 2D (Solo Lectura)</Link>
+          <div style={{ fontWeight: 700, margin: "8px 8px 12px", color: "#374151" }}>
+            📖 Biblioteca 2D (Solo Lectura)
           </div>
-          <div className="user-alert">
-            <p>
-              <strong>👤 Usuario Normal:</strong> Solo lectura
-            </p>
-          </div>
+          <Item to={`${base}`}>🔎 Buscar libros</Item>
         </>
       )}
     </aside>

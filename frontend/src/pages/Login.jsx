@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { saveUser } from "../utils/sessionManager"; // ✅ corregido
+import { loginUser } from "../utils/sessionManager";
 import "../style-custom.css";
 
 export default function Login() {
@@ -12,28 +12,26 @@ export default function Login() {
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // ✅ Usuarios base (puedes conectar luego con tu backend o DB)
     const admin = {
       user: "admin",
       pass: "12345",
-      role: "admin", // 🔹 en minúsculas, coincide con ProtectedRoute
+      role: "Administrador",
       name: "Administrador del sistema",
     };
 
     const user = {
       user: "usuario",
       pass: "12345",
-      role: "usuario", // 🔹 en minúsculas también
-      name: "Usuario estándar",
+      role: "Usuario",
+      name: "Usuario Normal",
     };
 
-    // ✅ Validación de inicio de sesión
     if (username === admin.user && password === admin.pass) {
-      saveUser(admin);
-      navigate("/"); // Panel principal
+      loginUser(admin);
+      navigate("/admin"); // ✅ lleva al layout de administrador
     } else if (username === user.user && password === user.pass) {
-      saveUser(user);
-      navigate("/biblioteca"); // Vista del usuario normal
+      loginUser(user);
+      navigate("/u"); // ✅ lleva al layout de usuario normal
     } else {
       setError("Usuario o contraseña incorrectos");
     }
@@ -43,7 +41,7 @@ export default function Login() {
     <div className="login-container">
       <div className="login-box">
         <h2>📚 Sistema de Registro QR</h2>
-        <p>Registro de la Propiedad del Cantón Esmeraldas</p>
+        <p>Control de Entradas y Salidas con Códigos QR</p>
 
         <form onSubmit={handleLogin}>
           <input

@@ -12,43 +12,58 @@ export default function Dashboard({ books = [], history = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
 
-  // 📊 Calcular estadísticas generales
+  // 📊 Calcular estadísticas de forma segura y controlada
   useEffect(() => {
-    const total = books.length;
-    const archived = books.filter((b) => b.status === "En archivos").length;
-    const inUse = books.filter((b) => b.status === "En uso").length;
+    if (!Array.isArray(books) || !Array.isArray(history)) return;
+
+    const total = books?.length || 0;
+    const archived = books.filter((b) => b?.status === "En archivos").length;
+    const inUse = books.filter((b) => b?.status === "En uso").length;
 
     const today = new Date().toLocaleDateString("es-ES");
     const todayMoves = history.filter(
-      (h) => new Date(h.date).toLocaleDateString("es-ES") === today
+      (h) => h?.date && new Date(h.date).toLocaleDateString("es-ES") === today
     ).length;
 
-    setStats({
-      totalBooks: total,
-      archivedBooks: archived,
-      inUseBooks: inUse,
-      todayMovements: todayMoves,
+    // Solo actualiza si los valores realmente cambian
+    setStats((prev) => {
+      const newStats = {
+        totalBooks: total,
+        archivedBooks: archived,
+        inUseBooks: inUse,
+        todayMovements: todayMoves,
+      };
+      return JSON.stringify(prev) !== JSON.stringify(newStats)
+        ? newStats
+        : prev;
     });
-  }, [books, history]);
+  }, [books?.length, history?.length]);
 
-  // 🔍 Búsqueda rápida de libros
+  // 🔍 Búsqueda rápida
   const handleQuickSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
 
-    if (term.trim() === "") {
+    if (!term.trim()) {
       setResults([]);
       return;
     }
 
-    const filtered = books.filter(
-      (b) =>
-        b.year.toString().includes(term) ||
-        b.tome.toString().includes(term) ||
-        (b.type && b.type.toLowerCase().includes(term)) ||
-        (b.registryFrom && b.registryFrom.toString().includes(term)) ||
-        (b.registryTo && b.registryTo.toString().includes(term))
-    );
+    const filtered = books.filter((b) => {
+      const year = b.year?.toString().toLowerCase() || "";
+      const tome = b.tome?.toString().toLowerCase() || "";
+      const type = b.type?.toLowerCase() || "";
+      const regFrom = b.registryFrom?.toString() || "";
+      const regTo = b.registryTo?.toString() || "";
+      return (
+        year.includes(term) ||
+        tome.includes(term) ||
+        type.includes(term) ||
+        regFrom.includes(term) ||
+        regTo.includes(term)
+      );
+    });
+
     setResults(filtered);
   };
 
@@ -56,6 +71,7 @@ export default function Dashboard({ books = [], history = [] }) {
     <div className="page dashboard">
       <h2>📊 Panel Principal</h2>
 
+      {/* === ESTADÍSTICAS === */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-number">{stats.totalBooks}</div>
@@ -77,13 +93,22 @@ export default function Dashboard({ books = [], history = [] }) {
 
       {/* === BOTONES DE ACCIÓN === */}
       <div className="action-buttons">
-        <button className="btn btn-primary" onClick={() => (window.location.href = "/scanner")}>
+        <button
+          className="btn btn-primary"
+          onClick={() => (window.location.href = "/admin/escaneo")}
+        >
           📱 Escaneo Rápido
         </button>
-        <button className="btn btn-secondary" onClick={() => (window.location.href = "/libros")}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => (window.location.href = "/admin/libros")}
+        >
           📖 Ver Libros
         </button>
-        <button className="btn btn-success" onClick={() => alert("Abrir formulario de libro")}>
+        <button
+          className="btn btn-success"
+          onClick={() => (window.location.href = "/admin/libros")}
+        >
           ➕ Agregar Libro
         </button>
       </div>
@@ -111,7 +136,11 @@ export default function Dashboard({ books = [], history = [] }) {
                 Tipo: {b.type || "—"} <br />
                 Rango: {b.registryFrom} - {b.registryTo}
               </p>
-              <span className={`status-tag ${b.status === "En uso" ? "inuse" : "archived"}`}>
+              <span
+                className={`status-tag ${
+                  b.status === "En uso" ? "inuse" : "archived"
+                }`}
+              >
                 {b.status}
               </span>
             </div>
