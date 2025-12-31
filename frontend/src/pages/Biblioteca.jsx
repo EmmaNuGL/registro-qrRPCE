@@ -1,53 +1,55 @@
 import React, { useState, useEffect } from "react";
+import { getBooks } from "../services/booksService";
 
 export default function Biblioteca() {
   const [books, setBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
 
+  // 🔹 CARGA REAL DESDE BACKEND + RESPALDO LOCAL
   useEffect(() => {
-    // Simulación de datos
-    const sampleBooks = [
-      {
-        id: 1,
-        year: "1998",
-        tome: "Tomo A",
-        registryFrom: "001",
-        registryTo: "050",
-        status: "En uso",
-        currentHolder: "Juan Pérez",
-      },
-      {
-        id: 2,
-        year: "2000",
-        tome: "Tomo B",
-        registryFrom: "051",
-        registryTo: "100",
-        status: "En archivos",
-        currentHolder: null,
-      },
-    ];
-    setBooks(sampleBooks);
+    const loadBooks = async () => {
+      try {
+        const response = await getBooks();
+        const dbBooks = response.data;
+
+        setBooks(dbBooks);
+        localStorage.setItem("books", JSON.stringify(dbBooks));
+      } catch (error) {
+        console.warn(
+          "⚠️ Backend no disponible, cargando libros desde localStorage"
+        );
+        const localBooks =
+          JSON.parse(localStorage.getItem("books")) || [];
+        setBooks(localBooks);
+      }
+    };
+
+    loadBooks();
   }, []);
 
+  // 🔹 FILTROS
   const filteredBooks = books.filter((b) => {
     const matchesText =
-      b.year.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.tome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.year?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.tome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (b.currentHolder &&
         b.currentHolder.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus =
       statusFilter === "Todos" ||
-      b.status.toLowerCase() === statusFilter.toLowerCase();
+      b.status?.toLowerCase() === statusFilter.toLowerCase();
 
     return matchesText && matchesStatus;
   });
 
   return (
     <div className="biblioteca-view">
-      <h2 style={{ color: "#2b4eff" }}>📚 Biblioteca 2D — Vista de Solo Lectura</h2>
+      <h2 style={{ color: "#2b4eff" }}>
+        📚 Biblioteca 2D — Vista de Solo Lectura
+      </h2>
 
+      {/* 🔎 BUSCADOR Y FILTRO */}
       <div
         style={{
           display: "flex",
@@ -68,6 +70,7 @@ export default function Biblioteca() {
             border: "1px solid #ccc",
           }}
         />
+
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -83,6 +86,7 @@ export default function Biblioteca() {
         </select>
       </div>
 
+      {/* 🟢🔴 LEYENDA */}
       <div
         style={{
           background: "#eaf2ff",
@@ -93,10 +97,12 @@ export default function Biblioteca() {
         }}
       >
         <strong>Vista de Solo Lectura:</strong>{" "}
-        <span style={{ color: "green" }}>🟢 En Archivos</span> |{" "}
-        <span style={{ color: "red" }}>🔴 En Uso</span> | Haz clic para ver detalles
+        <span style={{ color: "#2b9348" }}>🟢 En Archivos</span> |{" "}
+        <span style={{ color: "#e63946" }}>🔴 En Uso</span> | Haz clic para ver
+        detalles
       </div>
 
+      {/* 📦 GRID DE LIBROS */}
       <div
         className="book-grid"
         style={{
@@ -108,31 +114,51 @@ export default function Biblioteca() {
         {filteredBooks.length > 0 ? (
           filteredBooks.map((book) => (
             <div
-              key={book.id}
+              key={book._id}
               style={{
                 background: "#fff",
                 borderRadius: "12px",
                 boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
                 padding: "1rem",
                 borderLeft: `6px solid ${
-                  book.status === "En uso" ? "#e63946" : "#2b9348"
+                  book.status === "En uso"
+                    ? "#e63946"
+                    : "#2b9348"
                 }`,
               }}
             >
-              <h3 style={{ margin: "0 0 5px 0" }}>{book.tome}</h3>
+              <h3 style={{ margin: "0 0 5px 0" }}>
+                {book.tome}
+              </h3>
+
               <p style={{ margin: 0 }}>
                 <strong>Año:</strong> {book.year}
               </p>
+
               <p style={{ margin: 0 }}>
                 <strong>Desde:</strong> {book.registryFrom} —{" "}
                 <strong>Hasta:</strong> {book.registryTo}
               </p>
+
               <p style={{ margin: 0 }}>
-                <strong>Estado:</strong> {book.status}
+                <strong>Estado:</strong>{" "}
+                <span
+                  style={{
+                    color:
+                      book.status === "En uso"
+                        ? "#e63946"
+                        : "#2b9348",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {book.status}
+                </span>
               </p>
-              {book.status === "En uso" && (
+
+              {book.status === "En uso" && book.currentHolder && (
                 <p style={{ margin: 0 }}>
-                  <strong>En posesión de:</strong> {book.currentHolder}
+                  <strong>En posesión de:</strong>{" "}
+                  {book.currentHolder}
                 </p>
               )}
             </div>
