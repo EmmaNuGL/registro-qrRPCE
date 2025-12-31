@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import "../style-custom.css";
+import { getBooks } from "../services/booksService";
 
-export default function Dashboard({ books = [], history = [] }) {
+export default function Dashboard() {
+  const [booksData, setBooksData] = useState([]);
   const [stats, setStats] = useState({
     totalBooks: 0,
     archivedBooks: 0,
@@ -12,32 +14,37 @@ export default function Dashboard({ books = [], history = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
 
-  // 📊 Calcular estadísticas de forma segura y controlada
+  // 📥 Cargar libros desde el backend
   useEffect(() => {
-    if (!Array.isArray(books) || !Array.isArray(history)) return;
+    const loadBooks = async () => {
+      try {
+        const res = await getBooks();
+        setBooksData(res.data || []);
+      } catch (error) {
+        console.error("❌ Error cargando libros:", error);
+      }
+    };
 
-    const total = books?.length || 0;
-    const archived = books.filter((b) => b?.status === "En archivos").length;
-    const inUse = books.filter((b) => b?.status === "En uso").length;
+    loadBooks();
+  }, []);
 
-    const today = new Date().toLocaleDateString("es-ES");
-    const todayMoves = history.filter(
-      (h) => h?.date && new Date(h.date).toLocaleDateString("es-ES") === today
+  // 📊 Calcular estadísticas
+  useEffect(() => {
+    if (!Array.isArray(booksData)) return;
+
+    const total = booksData.length;
+    const archived = booksData.filter(
+      (b) => b.status === "En archivos"
     ).length;
+    const inUse = booksData.filter((b) => b.status === "En uso").length;
 
-    // Solo actualiza si los valores realmente cambian
-    setStats((prev) => {
-      const newStats = {
-        totalBooks: total,
-        archivedBooks: archived,
-        inUseBooks: inUse,
-        todayMovements: todayMoves,
-      };
-      return JSON.stringify(prev) !== JSON.stringify(newStats)
-        ? newStats
-        : prev;
+    setStats({
+      totalBooks: total,
+      archivedBooks: archived,
+      inUseBooks: inUse,
+      todayMovements: 0, // se conectará luego con historial
     });
-  }, [books?.length, history?.length]);
+  }, [booksData]);
 
   // 🔍 Búsqueda rápida
   const handleQuickSearch = (e) => {
@@ -49,12 +56,13 @@ export default function Dashboard({ books = [], history = [] }) {
       return;
     }
 
-    const filtered = books.filter((b) => {
+    const filtered = booksData.filter((b) => {
       const year = b.year?.toString().toLowerCase() || "";
-      const tome = b.tome?.toString().toLowerCase() || "";
+      const tome = b.tome?.toLowerCase() || "";
       const type = b.type?.toLowerCase() || "";
       const regFrom = b.registryFrom?.toString() || "";
       const regTo = b.registryTo?.toString() || "";
+
       return (
         year.includes(term) ||
         tome.includes(term) ||
@@ -123,7 +131,7 @@ export default function Dashboard({ books = [], history = [] }) {
         onChange={handleQuickSearch}
       />
 
-      <div id="quickSearchResults" className="quick-results">
+      <div className="quick-results">
         {results.length === 0 && searchTerm !== "" ? (
           <p className="no-results">No se encontraron resultados</p>
         ) : (
