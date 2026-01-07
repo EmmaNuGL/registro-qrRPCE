@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import "../style-custom.css";
 import { getBooks } from "../services/booksService";
-import { getHistory } from "../services/historyService";
+import {
+  getHistory,
+  getTodayHistory,
+} from "../utils/historyStorage";
+
 
 export default function Dashboard() {
   const [booksData, setBooksData] = useState([]);
@@ -49,6 +53,15 @@ export default function Dashboard() {
       inUseBooks: inUse,
       todayMovements: 0, // luego se conecta real
     });
+    const todayMoves = getTodayHistory().length;
+
+setStats({
+  totalBooks: total,
+  archivedBooks: archived,
+  inUseBooks: inUse,
+  todayMovements: todayMoves,
+});
+
   }, [booksData]);
 
   /* =====================
@@ -57,8 +70,8 @@ export default function Dashboard() {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const res = await getHistory();
-        const ordered = (res.data || [])
+        const history = getHistory(); // LocalStorage devuelve el array directo
+        const ordered = (history || [])
           .sort((a, b) => new Date(b.date) - new Date(a.date))
           .slice(0, 5);
         setRecentHistory(ordered);
@@ -168,24 +181,31 @@ export default function Dashboard() {
       </div>
 
       {/* === MINI HISTORIAL === */}
-      <h3 style={{ marginTop: "30px" }}>🕒 Actividad Reciente</h3>
+      <h3>🕒 Actividades Recientes</h3>
 
-      {recentHistory.length === 0 ? (
-        <p className="no-results">Aún no hay movimientos registrados</p>
-      ) : (
-        <div className="history-preview">
-          {recentHistory.map((h, i) => (
-            <div key={i} className="history-item">
-              <strong>{h.action}</strong>
-              <p>
-                📘 {h.year} — Tomo {h.tome} <br />
-                👤 {h.user || "Sistema"} <br />
-                🕒 {new Date(h.date).toLocaleString("es-ES")}
-              </p>
-            </div>
-          ))}
-        </div>
+<div className="recent-history">
+  {recentHistory.map((h, i) => (
+    <div key={h.id || i} className="history-item">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <strong>📘 {h.tome}</strong>
+        <small style={{ color: "#666" }}>{new Date(h.date).toLocaleString("es-ES")}</small>
+      </div>
+      
+      <div style={{ fontSize: "0.9rem", color: "#444", margin: "5px 0" }}>
+        📅 Año: <strong>{h.year || "N/A"}</strong> | 🔢 Reg: <strong>{h.registryFrom || "?"} - {h.registryTo || "?"}</strong>
+      </div>
+
+      <p style={{ margin: "5px 0", fontStyle: "italic" }}>{h.description}</p>
+
+      {h.newStatus && (
+        <span className={`status-tag ${h.newStatus === "En uso" ? "inuse" : "archived"}`} style={{ fontSize: "0.8rem", padding: "2px 8px" }}>
+          {h.newStatus}
+        </span>
       )}
+    </div>
+  ))}
+</div>
+
     </div>
   );
 }
