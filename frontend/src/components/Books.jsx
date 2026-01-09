@@ -4,8 +4,6 @@ import AddBookModal from "./modals/AddBookModal";
 import EditBookModal from "./modals/EditBookModal";
 import ViewQRModal from "./modals/ViewQRModal";
 
-import { addHistory } from "../utils/historyStorage";
-
 import {
   getBooks,
   createBook,
@@ -31,7 +29,8 @@ export default function Books() {
         const res = await getBooks();
         setBooks(res.data);
         localStorage.setItem("books", JSON.stringify(res.data));
-      } catch {
+      } catch (err) {
+        console.warn("⚠️ Usando libros de localStorage");
         const local = JSON.parse(localStorage.getItem("books")) || [];
         setBooks(local);
       }
@@ -57,7 +56,7 @@ export default function Books() {
   });
 
   // ===============================
-  // ✅ AGREGAR LIBRO
+  // ✅ AGREGAR LIBRO (API + LOCAL)
   // ===============================
   const handleAddBook = async (newBook) => {
     try {
@@ -65,16 +64,6 @@ export default function Books() {
       const updated = [res.data, ...books];
       setBooks(updated);
       localStorage.setItem("books", JSON.stringify(updated));
-      addHistory({
-        type: "CREAR_LIBRO",
-        bookId: res.data._id,
-        tome: res.data.tome,
-        year: res.data.year,
-        registryFrom: res.data.registryFrom,
-        registryTo: res.data.registryTo,
-        description: "Libro agregado al sistema",
-        date: new Date().toISOString(),
-      });
       alert("✅ Libro guardado correctamente");
     } catch (err) {
       alert(err.response?.data?.error || "❌ Error al guardar libro");
@@ -97,8 +86,9 @@ export default function Books() {
       );
       setBooks(updated);
       localStorage.setItem("books", JSON.stringify(updated));
+      alert("✅ Libro actualizado");
     } catch {
-      console.error("Error al actualizar libro");
+      alert("❌ Error al actualizar");
     }
   };
 
@@ -119,31 +109,15 @@ export default function Books() {
   };
 
   // ===============================
-  // 🔄 CAMBIAR ESTADO + HISTORIAL
+  // 🔄 CAMBIAR ESTADO
   // ===============================
- const handleChangeStatus = async (book) => {
-  const newStatus = book.status === "En uso" ? "En archivos" : "En uso";
-
-  const updatedBook = {
-    ...book,
-    status: newStatus,
+  const handleChangeStatus = async (book) => {
+    const updatedBook = {
+      ...book,
+      status: book.status === "En uso" ? "En archivos" : "En uso",
+    };
+    await handleSaveEdit(updatedBook);
   };
-
-  await handleSaveEdit(updatedBook);
-
-  addHistory({
-    type: "CAMBIO_ESTADO",
-    bookId: book._id,
-    tome: book.tome,
-    year: book.year,
-    registryFrom: book.registryFrom,
-    registryTo: book.registryTo,
-    description: `Estado cambiado de "${book.status}" a "${newStatus}"`,
-    previousStatus: book.status,
-    newStatus: newStatus,
-    date: new Date().toISOString(),
-  });
-};
 
   // ===============================
   // 📦 UI
@@ -215,10 +189,7 @@ export default function Books() {
       />
 
       {viewingBook && (
-        <ViewQRModal
-          book={viewingBook}
-          onClose={() => setViewingBook(null)}
-        />
+        <ViewQRModal book={viewingBook} onClose={() => setViewingBook(null)} />
       )}
     </div>
   );
