@@ -11,8 +11,8 @@ export default function Reportes({ books = [], history = [] }) {
   const generateInventoryReport = () => {
     setReportType("Inventario");
 
-    const totalArchivos = books.filter(b => b.status === "En archivos").length;
-    const totalUso = books.filter(b => b.status === "En uso").length;
+    const totalArchivos = books.filter(b => b.estado === "DISPONIBLE").length;
+    const totalUso = books.filter(b => b.estado === "EN_USO").length;
 
     const html = `
       <div class="report-header" style="background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px;">
@@ -55,7 +55,7 @@ export default function Reportes({ books = [], history = [] }) {
     setReportType("Estadísticas");
 
     const librosPorEstado = books.reduce((acc, b) => {
-      acc[b.status] = (acc[b.status] || 0) + 1;
+      acc[b.estado] = (acc[b.estado] || 0) + 1;
       return acc;
     }, {});
 
@@ -125,19 +125,19 @@ export default function Reportes({ books = [], history = [] }) {
 
   const downloadDetailedReportExcel = () => {
     const exportData = history.map((entry) => {
-      const book = books.find((b) => b.title === entry.book);
+      // Assuming history comes from backend with joined book data
       return {
-        Fecha: new Date(entry.date).toLocaleDateString("es-ES"),
-        Hora: new Date(entry.date).toLocaleTimeString("es-ES"),
-        Libro: entry.book,
-        Usuario: entry.user,
-        Estado_Anterior: entry.oldStatus,
-        Estado_Nuevo: entry.newStatus,
-        Acción: entry.action,
-        Persona: entry.personName,
-        Observaciones: entry.actionNotes,
-        Tomo: book ? book.tome : "",
-        Año: book ? book.year : "",
+        Fecha: new Date(entry.fecha).toLocaleDateString("es-ES"),
+        Hora: new Date(entry.fecha).toLocaleTimeString("es-ES"),
+        Libro: entry.titulo,
+        Usuario: entry.nombre_usuario,
+        // Estado_Anterior: entry.oldStatus, // Not in new DB schema
+        // Estado_Nuevo: entry.newStatus,
+        Acción: entry.tipo_movimiento,
+        // Persona: entry.personName,
+        Observaciones: entry.observacion,
+        Tomo: entry.titulo,
+        Año: entry.anio,
       };
     });
 

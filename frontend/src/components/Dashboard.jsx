@@ -2,10 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../style-custom.css";
 import { getBooks } from "../services/booksService";
 import {
-  getHistory,
-  getTodayHistory,
-} from "../utils/historyStorage";
-
+  getMovements } from "../services/movementsService";
 
 export default function Dashboard() {
   const [booksData, setBooksData] = useState([]);
@@ -44,16 +41,16 @@ export default function Dashboard() {
     if (!Array.isArray(booksData)) return;
 
     const total = booksData.length;
-    const archived = booksData.filter(b => b.status === "En archivos").length;
-    const inUse = booksData.filter(b => b.status === "En uso").length;
+    const archived = booksData.filter(b => b.estado === "DISPONIBLE").length;
+    const inUse = booksData.filter(b => b.estado === "EN_USO").length;
 
     setStats({
       totalBooks: total,
       archivedBooks: archived,
       inUseBooks: inUse,
-      todayMovements: 0, // luego se conecta real
+      todayMovements: 0,
     });
-    const todayMoves = getTodayHistory().length;
+    const todayMoves = recentHistory.filter(h => new Date(h.fecha).toDateString() === new Date().toDateString()).length;
 
 setStats({
   totalBooks: total,
@@ -62,7 +59,7 @@ setStats({
   todayMovements: todayMoves,
 });
 
-  }, [booksData]);
+  }, [booksData, recentHistory]);
 
   /* =====================
      🕒 MINI HISTORIAL (SEGURO)
@@ -70,9 +67,9 @@ setStats({
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const history = getHistory(); // LocalStorage devuelve el array directo
-        const ordered = (history || [])
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
+        const res = await getMovements();
+        const ordered = (res.data || [])
+          // .sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) // Already sorted by backend
           .slice(0, 5);
         setRecentHistory(ordered);
       } catch (error) {
@@ -96,18 +93,14 @@ setStats({
     }
 
     const filtered = booksData.filter((b) => {
-      const year = b.year?.toString().toLowerCase() || "";
-      const tome = b.tome?.toLowerCase() || "";
-      const type = b.type?.toLowerCase() || "";
-      const regFrom = b.registryFrom?.toString() || "";
-      const regTo = b.registryTo?.toString() || "";
+      const year = b.anio?.toString().toLowerCase() || "";
+      const tome = b.titulo?.toLowerCase() || "";
+      const loc = b.ubicacion?.toLowerCase() || "";
 
       return (
         year.includes(term) ||
         tome.includes(term) ||
-        type.includes(term) ||
-        regFrom.includes(term) ||
-        regTo.includes(term)
+        loc.includes(term)
       );
     });
 
@@ -167,13 +160,12 @@ setStats({
         ) : (
           results.map((b, i) => (
             <div key={i} className="book-preview">
-              <strong>📘 {b.year} — Libro {b.tome}</strong>
+              <strong>📘 {b.anio} — {b.titulo}</strong>
               <p>
-                Tipo: {b.type || "—"} <br />
-                Rango: {b.registryFrom} - {b.registryTo}
+                Ubicación: {b.ubicacion}
               </p>
-              <span className={`status-tag ${b.status === "En uso" ? "inuse" : "archived"}`}>
-                {b.status}
+              <span className={`status-tag ${b.estado === "EN_USO" ? "inuse" : "archived"}`}>
+                {b.estado}
               </span>
             </div>
           ))
@@ -185,23 +177,19 @@ setStats({
 
 <div className="recent-history">
   {recentHistory.map((h, i) => (
-    <div key={h.id || i} className="history-item">
+    <div key={h.id_movimiento || i} className="history-item">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong>📘 {h.tome}</strong>
-        <small style={{ color: "#666" }}>{new Date(h.date).toLocaleString("es-ES")}</small>
+        <strong>📘 {h.titulo}</strong>
+        <small style={{ color: "#666" }}>{new Date(h.fecha).toLocaleString("es-ES")}</small>
       </div>
       
       <div style={{ fontSize: "0.9rem", color: "#444", margin: "5px 0" }}>
-        📅 Año: <strong>{h.year || "N/A"}</strong> | 🔢 Reg: <strong>{h.registryFrom || "?"} - {h.registryTo || "?"}</strong>
+        👤 {h.nombre_usuario} | 🔄 {h.tipo_movimiento}
       </div>
 
-      <p style={{ margin: "5px 0", fontStyle: "italic" }}>{h.description}</p>
+      <p style={{ margin: "5px 0", fontStyle: "italic" }}>{h.observacion}</p>
 
-      {h.newStatus && (
-        <span className={`status-tag ${h.newStatus === "En uso" ? "inuse" : "archived"}`} style={{ fontSize: "0.8rem", padding: "2px 8px" }}>
-          {h.newStatus}
-        </span>
-      )}
+      
     </div>
   ))}
 </div>

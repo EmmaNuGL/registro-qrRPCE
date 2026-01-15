@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import axios from "axios";
+import { getBookByQR } from "../services/booksService";
+import { createMovement } from "../services/movementsService";
 
 export default function Scanner() {
   const [scanning, setScanning] = useState(false);
@@ -15,7 +16,7 @@ export default function Scanner() {
   // 🔎 Buscar información del libro escaneado
   const fetchBookData = async (code) => {
     try {
-      const { data } = await axios.get(`http://localhost:4000/api/books/${code}`);
+      const { data } = await getBookByQR(code);
       setBookInfo(data);
     } catch (error) {
       console.warn("Libro no encontrado:", error);
@@ -77,30 +78,29 @@ export default function Scanner() {
     if (!detectedCode) return;
     try {
       // 1️⃣ Consultar libro actual
-      const { data: book } = await axios.get(
-        `http://localhost:4000/api/books/${detectedCode}`
-      );
+      const { data: book } = await getBookByQR(detectedCode);
 
       if (!book) {
         setMessage("⚠️ Libro no encontrado.");
         return;
       }
 
-      // 2️⃣ Cambiar estado
-      const newStatus = book.status === "En uso" ? "En archivos" : "En uso";
-      await axios.put(`http://localhost:4000/api/books/${book._id}`, {
-        ...book,
-        status: newStatus,
-      });
+      // 2️⃣ Determinar acción basada en estado
+      const action = book.estado === "EN_USO" ? "DEVOLUCION" : "PRESTAMO";
+      
+      // TODO: Obtener ID de usuario real de la sesión
+      const userId = 1; // Placeholder, replace with session user ID
 
       // 3️⃣ Registrar en historial
-      await axios.post("http://localhost:4000/api/history", {
-        code: detectedCode,
-        action: newStatus === "En uso" ? "Préstamo" : "Devolución",
-        date: new Date().toLocaleString(),
+      await createMovement({
+        id_usuario: userId,
+        id_libro: book.id_libro,
+        tipo_movimiento: action,
+        observacion: `Escaneo QR: ${action}`,
+        // Backend handles date and status update
       });
 
-      setMessage(`✅ Estado cambiado a "${newStatus}". Movimiento registrado.`);
+      setMessage(`✅ Movimiento registrado: ${action}`);
       setDetectedCode(null);
       setBookInfo(null);
     } catch (error) {
@@ -122,22 +122,18 @@ export default function Scanner() {
 
     try {
       for (const code of batchList) {
-        const { data: book } = await axios.get(
-          `http://localhost:4000/api/books/${code}`
-        );
+        const { data: book } = await getBookByQR(code);
         if (!book) continue;
 
-        const newStatus = book.status === "En uso" ? "En archivos" : "En uso";
-        await axios.put(`http://localhost:4000/api/books/${book._id}`, {
-          ...book,
-          status: newStatus,
-        });
+        const action = book.estado === "EN_USO" ? "DEVOLUCION" : "PRESTAMO";
+        const userId = 1; // Placeholder
 
-        await axios.post("http://localhost:4000/api/history", {
-          code,
-          action: newStatus === "En uso" ? "Préstamo (Lote)" : "Devolución (Lote)",
-          date: new Date().toLocaleString(),
-        });
+        await createMovement({
+            id_usuario: userId,
+            id_libro: book.id_libro,
+            tipo_movimiento: action,
+            observacion: `Lote QR: ${action}`,
+        }); 
       }
 
       setMessage("✅ Lote procesado correctamente.");
@@ -180,9 +176,9 @@ export default function Scanner() {
       {bookInfo && (
         <div className="detected-box">
           <h4>📘 Información del Libro</h4>
-          <p><strong>Tomo:</strong> {bookInfo.tome}</p>
-          <p><strong>Año:</strong> {bookInfo.year}</p>
-          <p><strong>Estado actual:</strong> {bookInfo.status}</p>
+          <p><strong>Título:</strong> {bookInfo.titulo}</p>
+          <p><strong>Año:</strong> {bookInfo.anio}</p>
+          <p><strong>Estado actual:</strong> {bookInfo.estado}</p>
           <div className="detected-actions">
             <button onClick={processDetected} className="btn btn-success">
               ✅ Procesar

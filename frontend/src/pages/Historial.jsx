@@ -3,6 +3,7 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { getMovements } from "../services/movementsService";
 
 export default function Historial() {
   const [history, setHistory] = useState([]);
@@ -12,8 +13,8 @@ export default function Historial() {
   // 🧠 Cargar historial desde la base de datos
   const loadHistory = async () => {
     try {
-      const { data } = await axios.get("http://localhost:4000/api/history");
-      setHistory(data.reverse());
+      const { data } = await getMovements();
+      setHistory(data); // Backend already sorts
     } catch (error) {
       console.error("Error al cargar historial:", error);
     }
@@ -26,9 +27,9 @@ export default function Historial() {
   // 🔍 Filtrar resultados
   const filteredHistory = history.filter((h) => {
     const textMatch =
-      h.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (h.action && h.action.toLowerCase().includes(searchTerm.toLowerCase()));
-    const typeMatch = filter === "todos" || h.action.includes(filter);
+      h.codigo_qr?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (h.tipo_movimiento && h.tipo_movimiento.toLowerCase().includes(searchTerm.toLowerCase()));
+    const typeMatch = filter === "todos" || h.tipo_movimiento === filter;
     return textMatch && typeMatch;
   });
 
@@ -45,10 +46,10 @@ export default function Historial() {
     const doc = new jsPDF();
     doc.text("Historial de Movimientos - Registro de la Propiedad", 14, 15);
     const tableData = filteredHistory.map((h) => [
-      h.code,
-      h.action,
-      h.user || "Administrador",
-      h.date,
+      h.codigo_qr,
+      h.tipo_movimiento,
+      h.nombre_usuario || "Desconocido",
+      new Date(h.fecha).toLocaleString(),
     ]);
     doc.autoTable({
       head: [["Código", "Acción", "Usuario", "Fecha y Hora"]],
@@ -72,8 +73,8 @@ export default function Historial() {
         />
         <select value={filter} onChange={(e) => setFilter(e.target.value)}>
           <option value="todos">Todos</option>
-          <option value="Préstamo">Préstamos</option>
-          <option value="Devolución">Devoluciones</option>
+          <option value="PRESTAMO">Préstamos</option>
+          <option value="DEVOLUCION">Devoluciones</option>
         </select>
         <button onClick={exportToExcel} className="btn btn-success">
           📗 Exportar Excel
@@ -106,17 +107,17 @@ export default function Historial() {
                 <tr
                   key={i}
                   className={
-                    h.action.includes("Préstamo")
+                    h.tipo_movimiento === "PRESTAMO"
                       ? "row-prestamo"
-                      : h.action.includes("Devolución")
+                      : h.tipo_movimiento === "DEVOLUCION"
                       ? "row-devolucion"
                       : "row-otros"
                   }
                 >
-                  <td>{h.code}</td>
-                  <td>{h.action}</td>
-                  <td>{h.user || "Administrador"}</td>
-                  <td>{h.date}</td>
+                  <td>{h.codigo_qr}</td>
+                  <td>{h.tipo_movimiento}</td>
+                  <td>{h.nombre_usuario}</td>
+                  <td>{new Date(h.fecha).toLocaleString()}</td>
                 </tr>
               ))
             )}

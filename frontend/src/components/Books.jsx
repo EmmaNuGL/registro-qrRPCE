@@ -4,7 +4,7 @@ import AddBookModal from "./modals/AddBookModal";
 import EditBookModal from "./modals/EditBookModal";
 import ViewQRModal from "./modals/ViewQRModal";
 
-import { addHistory } from "../utils/historyStorage";
+// import { addHistory } from "../utils/historyStorage"; // Removed local history
 
 import {
   getBooks,
@@ -44,14 +44,13 @@ export default function Books() {
   // ===============================
   const filteredBooks = books.filter((b) => {
     const matchText =
-      b.year?.toString().includes(searchTerm) ||
-      b.tome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.registryFrom?.toString().includes(searchTerm) ||
-      b.registryTo?.toString().includes(searchTerm);
+      b.anio?.toString().includes(searchTerm) ||
+      b.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.ubicacion?.toLowerCase().includes(searchTerm);
 
     const matchStatus =
       filterStatus === "todos" ||
-      b.status?.toLowerCase() === filterStatus.toLowerCase();
+      b.estado?.toLowerCase() === filterStatus.toLowerCase();
 
     return matchText && matchStatus;
   });
@@ -65,16 +64,6 @@ export default function Books() {
       const updated = [res.data, ...books];
       setBooks(updated);
       localStorage.setItem("books", JSON.stringify(updated));
-      addHistory({
-        type: "CREAR_LIBRO",
-        bookId: res.data._id,
-        tome: res.data.tome,
-        year: res.data.year,
-        registryFrom: res.data.registryFrom,
-        registryTo: res.data.registryTo,
-        description: "Libro agregado al sistema",
-        date: new Date().toISOString(),
-      });
       alert("✅ Libro guardado correctamente");
     } catch (err) {
       alert(err.response?.data?.error || "❌ Error al guardar libro");
@@ -91,9 +80,9 @@ export default function Books() {
 
   const handleSaveEdit = async (updatedBook) => {
     try {
-      const res = await updateBook(updatedBook._id, updatedBook);
+      const res = await updateBook(updatedBook.id_libro, updatedBook);
       const updated = books.map((b) =>
-        b._id === res.data._id ? res.data : b
+        b.id_libro === res.data.id_libro ? res.data : b
       );
       setBooks(updated);
       localStorage.setItem("books", JSON.stringify(updated));
@@ -109,7 +98,7 @@ export default function Books() {
     if (!window.confirm("¿Eliminar este libro?")) return;
     try {
       await deleteBook(id);
-      const updated = books.filter((b) => b._id !== id);
+      const updated = books.filter((b) => b.id_libro !== id);
       setBooks(updated);
       localStorage.setItem("books", JSON.stringify(updated));
       alert("🗑️ Libro eliminado");
@@ -122,27 +111,16 @@ export default function Books() {
   // 🔄 CAMBIAR ESTADO + HISTORIAL
   // ===============================
  const handleChangeStatus = async (book) => {
-  const newStatus = book.status === "En uso" ? "En archivos" : "En uso";
+  const newStatus = book.estado === "EN_USO" ? "DISPONIBLE" : "EN_USO";
 
   const updatedBook = {
     ...book,
-    status: newStatus,
+    estado: newStatus,
   };
 
   await handleSaveEdit(updatedBook);
-
-  addHistory({
-    type: "CAMBIO_ESTADO",
-    bookId: book._id,
-    tome: book.tome,
-    year: book.year,
-    registryFrom: book.registryFrom,
-    registryTo: book.registryTo,
-    description: `Estado cambiado de "${book.status}" a "${newStatus}"`,
-    previousStatus: book.status,
-    newStatus: newStatus,
-    date: new Date().toISOString(),
-  });
+  // Note: History is now handled by backend movements, but this is a manual status change.
+  // Ideally, use the movement endpoint, but for quick edit we keep updateBook.
 };
 
   // ===============================
@@ -162,8 +140,8 @@ export default function Books() {
           onChange={(e) => setFilterStatus(e.target.value)}
         >
           <option value="todos">Todos</option>
-          <option value="En uso">En uso</option>
-          <option value="En archivos">En archivos</option>
+          <option value="EN_USO">En uso</option>
+          <option value="DISPONIBLE">Disponible</option>
         </select>
         <p>Mostrando {filteredBooks.length}</p>
       </div>
@@ -176,23 +154,23 @@ export default function Books() {
         {filteredBooks.length ? (
           filteredBooks.map((b) => (
             <div
-              key={b._id}
+              key={b.id_libro}
               className={`book-card ${
-                b.status === "En uso" ? "status-uso" : "status-archivo"
+                b.estado === "EN_USO" ? "status-uso" : "status-archivo"
               }`}
             >
-              <h3>{b.tome}</h3>
-              <p><strong>Año:</strong> {b.year}</p>
+              <h3>{b.titulo}</h3>
+              <p><strong>Año:</strong> {b.anio}</p>
               <p>
-                <strong>Registros:</strong> {b.registryFrom} – {b.registryTo}
+                <strong>Ubicación:</strong> {b.ubicacion}
               </p>
-              <p><strong>Estado:</strong> {b.status}</p>
+              <p><strong>Estado:</strong> {b.estado}</p>
 
               <div className="book-actions">
                 <button onClick={() => setViewingBook(b)}>🔍 QR</button>
                 <button onClick={() => handleEdit(b)}>✏️</button>
-                <button onClick={() => handleDelete(b._id)}>🗑️</button>
-                <button onClick={() => handleChangeStatus(b)}>🔄</button>
+                <button onClick={() => handleDelete(b.id_libro)}>🗑️</button>
+                {/* <button onClick={() => handleChangeStatus(b)}>🔄</button> Use Scanner for movements */}
               </div>
             </div>
           ))
