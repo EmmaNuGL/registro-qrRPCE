@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const db = require('./db');
+const pool = require('./config/db'); // 🔴 CAMBIO AQUÍ
 
 // 🧩 Importar rutas
 const booksRoutes = require('./routes/books.routes');
@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 // 🌐 Rutas principales
-app.use('/api/libros', booksRoutes); // Changed to Spanish to match requirement
+app.use('/api/libros', booksRoutes);
 app.use('/api/movimientos', movementsRoutes);
 app.use('/api/usuarios', usersRoutes);
 
@@ -23,6 +23,16 @@ app.use('/api/usuarios', usersRoutes);
 app.get('/', (req, res) => {
   res.send('✅ API del sistema QR funcionando correctamente');
 });
+
+// ✅ PRUEBA DE CONEXIÓN (ESTÁ BIEN UBICADA)
+pool.query("SELECT * FROM libros LIMIT 1")
+  .then(res => {
+    console.log("✅ Conectado a PostgreSQL");
+    console.log("Ejemplo libro:", res.rows);
+  })
+  .catch(err => {
+    console.error("❌ Error PostgreSQL:", err.message);
+  });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
