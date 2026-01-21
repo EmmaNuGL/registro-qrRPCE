@@ -1,40 +1,65 @@
 const pool = require('../config/db');
 
+/* ===============================
+   GET ALL MOVEMENTS (HISTORY)
+================================ */
 const getMovements = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT m.*, l.titulo, l.codigo_qr, u.nombre as nombre_usuario 
-      FROM movimientos m
-      JOIN libros l ON m.id_libro = l.id_libro
-      LEFT JOIN usuarios u ON m.id_usuario = u.id_usuario
-      ORDER BY m.fecha DESC
+      SELECT 
+        m.*,
+        b.volume_name,
+        b.qr_code,
+        u.name AS user_name
+      FROM movements m
+      JOIN books b ON m.id_book = b.id_book
+      LEFT JOIN users u ON m.id_user = u.id_user
+      ORDER BY m.created_at DESC
     `);
+
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+/* ===============================
+   CREATE MOVEMENT
+================================ */
 const createMovement = async (req, res) => {
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
-    const { id_usuario, id_libro, tipo_movimiento, observacion } = req.body;
 
-    // Insertar movimiento
-    const movRes = await client.query(
-      'INSERT INTO movimientos (id_usuario, id_libro, fecha, tipo_movimiento, observacion) VALUES ($1, $2, NOW(), $3, $4) RETURNING *',
-      [id_usuario, id_libro, tipo_movimiento, observacion]
+    const {
+      id_user,
+      id_book,
+      movement_type,
+      observation
+    } = req.body;
+
+    /* Insert movement */
+    const movementResult = await client.query(
+      `INSERT INTO movements 
+      (id_user, id_book, movement_type, observation, created_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      RETURNING *`,
+      [id_user, id_book, movement_type, observation || null]
     );
 
-    // Actualizar estado del libro
-    let nuevoEstado = 'DISPONIBLE';
-    if (tipo_movimiento === 'PRESTAMO') nuevoEstado = 'EN_USO';
-    
-    await client.query('UPDATE libros SET estado = $1 WHERE id_libro = $2', [nuevoEstado, id_libro]);
+    /* Update book status */
+    let newStatus = 'ARCHIVED';
+    if (movement_type === 'CHECK_OUT') newStatus = 'IN_USE';
+
+    await client.query(
+      'UPDATE books SET status = $1 WHERE id_book = $2',
+      [newStatus, id_book]
+    );
 
     await client.query('COMMIT');
-    res.status(201).json(movRes.rows[0]);
+    res.status(201).json(movementResult.rows[0]);
+
   } catch (error) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: error.message });
@@ -43,4 +68,7 @@ const createMovement = async (req, res) => {
   }
 };
 
-module.exports = { getMovements, createMovement };
+module.exports = {
+  getMovements,
+  createMovement
+};

@@ -1,70 +1,135 @@
 const pool = require('../config/db');
 
+/* ===============================
+   GET ALL BOOKS
+================================ */
 const getBooks = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM libros ORDER BY fecha_registro DESC');
+    const result = await pool.query(
+      'SELECT * FROM books ORDER BY created_at DESC'
+    );
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+/* ===============================
+   CREATE BOOK
+================================ */
 const createBook = async (req, res) => {
   try {
-    const { codigo_qr, titulo, anio, ubicacion, estado } = req.body;
+    const {
+      qr_code,
+      volume_name,
+      volume_number,
+      year,
+      register_from,
+      register_to,
+      status,
+      observations
+    } = req.body;
+
     const result = await pool.query(
-      'INSERT INTO libros (codigo_qr, titulo, anio, ubicacion, estado, fecha_registro) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *',
-      [codigo_qr, titulo, anio, ubicacion, estado || 'DISPONIBLE']
+      `INSERT INTO books 
+      (qr_code, volume_name, volume_number, year, register_from, register_to, status, observations, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+      RETURNING *`,
+      [
+        qr_code,
+        volume_name,
+        volume_number || null,
+        year,
+        register_from,
+        register_to,
+        status || 'ARCHIVED',
+        observations || null
+      ]
     );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+/* ===============================
+   GET BOOK BY ID
+================================ */
 const getBookById = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM libros WHERE id_libro = $1', [id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Libro no encontrado' });
+    const result = await pool.query(
+      'SELECT * FROM books WHERE id_book = $1',
+      [id]
+    );
+
+    if (!result.rows.length)
+      return res.status(404).json({ error: 'Book not found' });
+
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+/* ===============================
+   GET BOOK BY QR
+================================ */
 const getBookByQR = async (req, res) => {
   try {
-    const { codigo_qr } = req.params;
-    const result = await pool.query('SELECT * FROM libros WHERE codigo_qr = $1', [codigo_qr]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Libro no encontrado' });
+    const { qr } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM books WHERE qr_code = $1',
+      [qr]
+    );
+
+    if (!result.rows.length)
+      return res.status(404).json({ error: 'Book not found' });
+
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+/* ===============================
+   UPDATE BOOK STATUS
+================================ */
 const updateBookStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body;
+    const { status } = req.body;
+
     const result = await pool.query(
-      'UPDATE libros SET estado = $1 WHERE id_libro = $2 RETURNING *',
-      [estado, id]
+      'UPDATE books SET status = $1 WHERE id_book = $2 RETURNING *',
+      [status, id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Libro no encontrado' });
+
+    if (!result.rows.length)
+      return res.status(404).json({ error: 'Book not found' });
+
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+/* ===============================
+   DELETE BOOK
+================================ */
 const deleteBook = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('DELETE FROM libros WHERE id_libro = $1 RETURNING *', [id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Libro no encontrado' });
-    res.json({ message: 'Libro eliminado' });
+    const result = await pool.query(
+      'DELETE FROM books WHERE id_book = $1 RETURNING *',
+      [id]
+    );
+
+    if (!result.rows.length)
+      return res.status(404).json({ error: 'Book not found' });
+
+    res.json({ message: 'Book deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
