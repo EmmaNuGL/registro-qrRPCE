@@ -6,7 +6,7 @@ const pool = require('../config/db');
 const getBooks = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM books ORDER BY entry_date DESC'
+      'SELECT * FROM books ORDER BY created_at DESC'
     );
     res.json(result.rows);
   } catch (error) {
