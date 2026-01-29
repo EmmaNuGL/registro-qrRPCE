@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../style-custom.css";
 import { getBooks } from "../services/booksService";
-import {
-  getMovements } from "../services/movementsService";
+import { getMovements } from "../services/movementsService";
 
 export default function Dashboard() {
   const [booksData, setBooksData] = useState([]);
@@ -19,7 +18,7 @@ export default function Dashboard() {
   const [results, setResults] = useState([]);
 
   /* =====================
-     📥 CARGAR LIBROS
+     📥 LOAD BOOKS
   ===================== */
   useEffect(() => {
     const loadBooks = async () => {
@@ -27,7 +26,7 @@ export default function Dashboard() {
         const res = await getBooks();
         setBooksData(res.data || []);
       } catch (error) {
-        console.error("❌ Error cargando libros:", error);
+        console.error("❌ Error loading books:", error);
       }
     };
 
@@ -35,45 +34,38 @@ export default function Dashboard() {
   }, []);
 
   /* =====================
-     📊 ESTADÍSTICAS
+     📊 STATISTICS
   ===================== */
   useEffect(() => {
     if (!Array.isArray(booksData)) return;
 
     const total = booksData.length;
-    const archived = booksData.filter(b => b.estado === "DISPONIBLE").length;
-    const inUse = booksData.filter(b => b.estado === "EN_USO").length;
+    const archived = booksData.filter(b => b.status === "ARCHIVED").length;
+    const inUse = booksData.filter(b => b.status === "IN_USE").length;
+
+    const todayMoves = recentHistory.filter(h =>
+      new Date(h.created_at).toDateString() === new Date().toDateString()
+    ).length;
 
     setStats({
       totalBooks: total,
       archivedBooks: archived,
       inUseBooks: inUse,
-      todayMovements: 0,
+      todayMovements: todayMoves,
     });
-    const todayMoves = recentHistory.filter(h => new Date(h.fecha).toDateString() === new Date().toDateString()).length;
-
-setStats({
-  totalBooks: total,
-  archivedBooks: archived,
-  inUseBooks: inUse,
-  todayMovements: todayMoves,
-});
-
   }, [booksData, recentHistory]);
 
   /* =====================
-     🕒 MINI HISTORIAL (SEGURO)
+     🕒 RECENT MOVEMENTS
   ===================== */
   useEffect(() => {
     const loadHistory = async () => {
       try {
         const res = await getMovements();
-        const ordered = (res.data || [])
-          // .sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) // Already sorted by backend
-          .slice(0, 5);
+        const ordered = (res.data || []).slice(0, 5);
         setRecentHistory(ordered);
-      } catch (error) {
-        console.warn("⚠️ Historial no disponible aún");
+      } catch {
+        console.warn("⚠️ History not available yet");
       }
     };
 
@@ -81,7 +73,7 @@ setStats({
   }, []);
 
   /* =====================
-     🔍 BÚSQUEDA RÁPIDA
+     🔍 QUICK SEARCH
   ===================== */
   const handleQuickSearch = (e) => {
     const term = e.target.value.toLowerCase();
@@ -93,14 +85,14 @@ setStats({
     }
 
     const filtered = booksData.filter((b) => {
-      const year = b.anio?.toString().toLowerCase() || "";
-      const tome = b.titulo?.toLowerCase() || "";
-      const loc = b.ubicacion?.toLowerCase() || "";
+      const year = b.year?.toString() || "";
+      const name = b.volume_name?.toLowerCase() || "";
+      const qr = b.qr_code?.toLowerCase() || "";
 
       return (
         year.includes(term) ||
-        tome.includes(term) ||
-        loc.includes(term)
+        name.includes(term) ||
+        qr.includes(term)
       );
     });
 
@@ -111,7 +103,7 @@ setStats({
     <div className="page dashboard">
       <h2>📊 Panel Principal</h2>
 
-      {/* === ESTADÍSTICAS === */}
+      {/* === STATISTICS === */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-number">{stats.totalBooks}</div>
@@ -119,7 +111,7 @@ setStats({
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.archivedBooks}</div>
-          <div>En Archivos</div>
+          <div>En Archivo</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.inUseBooks}</div>
@@ -131,7 +123,7 @@ setStats({
         </div>
       </div>
 
-      {/* === BOTONES === */}
+      {/* === ACTIONS === */}
       <div className="action-buttons">
         <button className="btn btn-primary" onClick={() => window.location.href = "/admin/escaneo"}>
           📱 Escaneo Rápido
@@ -144,12 +136,12 @@ setStats({
         </button>
       </div>
 
-      {/* === CONSULTA RÁPIDA === */}
+      {/* === QUICK SEARCH === */}
       <h3>🔍 Consulta Rápida de Libros</h3>
       <input
         type="text"
         className="search-bar"
-        placeholder="Buscar libro por año, tomo, registro..."
+        placeholder="Buscar por año, tomo o QR..."
         value={searchTerm}
         onChange={handleQuickSearch}
       />
@@ -160,40 +152,37 @@ setStats({
         ) : (
           results.map((b, i) => (
             <div key={i} className="book-preview">
-              <strong>📘 {b.anio} — {b.titulo}</strong>
-              <p>
-                Ubicación: {b.ubicacion}
-              </p>
-              <span className={`status-tag ${b.estado === "EN_USO" ? "inuse" : "archived"}`}>
-                {b.estado}
+              <strong>📘 {b.year} — {b.volume_name}</strong>
+              <p>QR: {b.qr_code}</p>
+              <span className={`status-tag ${b.status === "IN_USE" ? "inuse" : "archived"}`}>
+                {b.status}
               </span>
             </div>
           ))
         )}
       </div>
 
-      {/* === MINI HISTORIAL === */}
+      {/* === RECENT ACTIVITY === */}
       <h3>🕒 Actividades Recientes</h3>
 
-<div className="recent-history">
-  {recentHistory.map((h, i) => (
-    <div key={h.id_movimiento || i} className="history-item">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong>📘 {h.titulo}</strong>
-        <small style={{ color: "#666" }}>{new Date(h.fecha).toLocaleString("es-ES")}</small>
+      <div className="recent-history">
+        {recentHistory.map((h, i) => (
+          <div key={h.id_movement || i} className="history-item">
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <strong>📘 {h.volume_name}</strong>
+              <small>{new Date(h.created_at).toLocaleString("es-ES")}</small>
+            </div>
+
+            <div style={{ fontSize: "0.9rem", color: "#444" }}>
+              👤 {h.user_name || "—"} | 🔄 {h.movement_type}
+            </div>
+
+            {h.observations && (
+              <p style={{ fontStyle: "italic" }}>{h.observations}</p>
+            )}
+          </div>
+        ))}
       </div>
-      
-      <div style={{ fontSize: "0.9rem", color: "#444", margin: "5px 0" }}>
-        👤 {h.nombre_usuario} | 🔄 {h.tipo_movimiento}
-      </div>
-
-      <p style={{ margin: "5px 0", fontStyle: "italic" }}>{h.observacion}</p>
-
-      
-    </div>
-  ))}
-</div>
-
     </div>
   );
 }

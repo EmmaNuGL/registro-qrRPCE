@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -8,116 +7,147 @@ import { getMovements } from "../services/movementsService";
 export default function Historial() {
   const [history, setHistory] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState("todos");
+  const [filter, setFilter] = useState("ALL");
 
-  // 🧠 Cargar historial desde la base de datos
-  const loadHistory = async () => {
-    try {
-      const { data } = await getMovements();
-      setHistory(data); // Backend already sorts
-    } catch (error) {
-      console.error("Error al cargar historial:", error);
-    }
-  };
-
+  /* =====================
+     📥 LOAD HISTORY
+  ===================== */
   useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const res = await getMovements();
+        setHistory(res.data || []);
+      } catch (error) {
+        console.error("❌ Error loading history:", error);
+      }
+    };
+
     loadHistory();
   }, []);
 
-  // 🔍 Filtrar resultados
+  /* =====================
+     🔍 FILTER
+  ===================== */
   const filteredHistory = history.filter((h) => {
-    const textMatch =
-      h.codigo_qr?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (h.tipo_movimiento && h.tipo_movimiento.toLowerCase().includes(searchTerm.toLowerCase()));
-    const typeMatch = filter === "todos" || h.tipo_movimiento === filter;
+    const text =
+      h.qr_code?.toLowerCase() ||
+      h.volume_name?.toLowerCase() ||
+      "";
+
+    const textMatch = text.includes(searchTerm.toLowerCase());
+    const typeMatch = filter === "ALL" || h.movement_type === filter;
+
     return textMatch && typeMatch;
   });
 
-  // 📤 Exportar a Excel
+  /* =====================
+     📤 EXPORT EXCEL
+  ===================== */
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredHistory);
+    const data = filteredHistory.map((h) => ({
+      "QR Code": h.qr_code,
+      "Volume": h.volume_name,
+      "Movement": h.movement_type,
+      "User": h.user_name || "—",
+      "Date": new Date(h.created_at).toLocaleString("es-ES"),
+      "Observations": h.observations || "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Historial");
-    XLSX.writeFile(wb, "Historial_Movimientos.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "History");
+    XLSX.writeFile(wb, "Movements_History.xlsx");
   };
 
-  // 📄 Exportar a PDF
+  /* =====================
+     📄 EXPORT PDF
+  ===================== */
   const exportToPDF = () => {
     const doc = new jsPDF();
-    doc.text("Historial de Movimientos - Registro de la Propiedad", 14, 15);
+
+    doc.text("Movements History - QR Registry", 14, 15);
+
     const tableData = filteredHistory.map((h) => [
-      h.codigo_qr,
-      h.tipo_movimiento,
-      h.nombre_usuario || "Desconocido",
-      new Date(h.fecha).toLocaleString(),
+      h.qr_code,
+      h.volume_name,
+      h.movement_type,
+      h.user_name || "—",
+      new Date(h.created_at).toLocaleString("es-ES"),
     ]);
+
     doc.autoTable({
-      head: [["Código", "Acción", "Usuario", "Fecha y Hora"]],
+      head: [["QR", "Volume", "Movement", "User", "Date"]],
       body: tableData,
       startY: 25,
     });
-    doc.save("Historial_Movimientos.pdf");
+
+    doc.save("Movements_History.pdf");
   };
 
   return (
     <div className="historial-container">
       <h2>📜 Historial de Movimientos</h2>
 
-      {/* Barra de búsqueda */}
+      {/* FILTER BAR */}
       <div className="filter-bar">
         <input
           type="text"
-          placeholder="Buscar por código o acción..."
+          placeholder="Buscar por QR o tomo..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+
         <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="todos">Todos</option>
-          <option value="PRESTAMO">Préstamos</option>
-          <option value="DEVOLUCION">Devoluciones</option>
+          <option value="ALL">Todos</option>
+          <option value="LOAN">Préstamos</option>
+          <option value="RETURN">Devoluciones</option>
         </select>
+
         <button onClick={exportToExcel} className="btn btn-success">
           📗 Exportar Excel
         </button>
+
         <button onClick={exportToPDF} className="btn btn-danger">
           📄 Exportar PDF
         </button>
       </div>
 
-      {/* Tabla de historial */}
+      {/* TABLE */}
       <div className="historial-table">
         <table>
           <thead>
             <tr>
-              <th>Código</th>
-              <th>Acción</th>
+              <th>QR</th>
+              <th>Tomo</th>
+              <th>Movimiento</th>
               <th>Usuario</th>
-              <th>Fecha y Hora</th>
+              <th>Fecha</th>
             </tr>
           </thead>
           <tbody>
             {filteredHistory.length === 0 ? (
               <tr>
-                <td colSpan="4" className="no-results">
+                <td colSpan="5" className="no-results">
                   No hay movimientos registrados.
                 </td>
               </tr>
             ) : (
               filteredHistory.map((h, i) => (
                 <tr
-                  key={i}
+                  key={h.id_movement || i}
                   className={
-                    h.tipo_movimiento === "PRESTAMO"
-                      ? "row-prestamo"
-                      : h.tipo_movimiento === "DEVOLUCION"
-                      ? "row-devolucion"
-                      : "row-otros"
+                    h.movement_type === "LOAN"
+                      ? "row-loan"
+                      : h.movement_type === "RETURN"
+                      ? "row-return"
+                      : ""
                   }
                 >
-                  <td>{h.codigo_qr}</td>
-                  <td>{h.tipo_movimiento}</td>
-                  <td>{h.nombre_usuario}</td>
-                  <td>{new Date(h.fecha).toLocaleString()}</td>
+                  <td>{h.qr_code}</td>
+                  <td>{h.volume_name}</td>
+                  <td>{h.movement_type}</td>
+                  <td>{h.user_name || "—"}</td>
+                  <td>{new Date(h.created_at).toLocaleString("es-ES")}</td>
                 </tr>
               ))
             )}
