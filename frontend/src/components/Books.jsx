@@ -23,25 +23,26 @@ export default function Books() {
   // 🔹 CARGA INICIAL
   // ===============================
   useEffect(() => {
-    const loadBooks = async () => {
-      try {
-        const res = await getBooks();
-        setBooks(res.data);
-      } catch (err) {
-        console.error("Error cargando libros", err);
-      }
-    };
     loadBooks();
   }, []);
 
+  const loadBooks = async () => {
+    try {
+      const res = await getBooks();
+      setBooks(res.data);
+    } catch (err) {
+      console.error("Error cargando libros", err);
+    }
+  };
+
   // ===============================
-  // 🔹 FILTRO
+  // 🔍 FILTRO
   // ===============================
   const filteredBooks = books.filter((b) => {
     const matchText =
-      b.year?.toString().includes(searchTerm) ||
       b.volume_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.id_book?.toLowerCase().includes(searchTerm.toLowerCase());
+      b.id_book?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.year?.toString().includes(searchTerm);
 
     const matchStatus =
       filterStatus === "todos" || b.status === filterStatus;
@@ -50,7 +51,7 @@ export default function Books() {
   });
 
   // ===============================
-  // ✅ AGREGAR LIBRO
+  // ➕ AGREGAR
   // ===============================
   const handleAddBook = async (newBook) => {
     try {
@@ -84,6 +85,28 @@ export default function Books() {
   };
 
   // ===============================
+  // 🔄 CAMBIAR ESTADO MANUAL
+  // ===============================
+  const toggleStatus = async (book) => {
+    const newStatus = book.status === "ARCHIVED" ? "IN_USE" : "ARCHIVED";
+
+    try {
+      const res = await updateBook(book.id_book, {
+        ...book,
+        status: newStatus,
+      });
+
+      setBooks(
+        books.map((b) =>
+          b.id_book === book.id_book ? res.data : b
+        )
+      );
+    } catch {
+      alert("❌ Error al cambiar estado");
+    }
+  };
+
+  // ===============================
   // 🗑️ ELIMINAR
   // ===============================
   const handleDelete = async (id) => {
@@ -91,7 +114,6 @@ export default function Books() {
     try {
       await deleteBook(id);
       setBooks(books.filter((b) => b.id_book !== id));
-      alert("🗑️ Libro eliminado");
     } catch {
       alert("❌ Error al eliminar");
     }
@@ -105,7 +127,7 @@ export default function Books() {
       <div className="books-toolbar">
         <input
           type="text"
-          placeholder="Buscar libro..."
+          placeholder="Buscar por tomo, ID o año..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -115,16 +137,16 @@ export default function Books() {
           onChange={(e) => setFilterStatus(e.target.value)}
         >
           <option value="todos">Todos</option>
-          <option value="ARCHIVED">Archivado</option>
+          <option value="ARCHIVED">Archivo</option>
           <option value="IN_USE">En uso</option>
         </select>
 
-        <p>Mostrando {filteredBooks.length}</p>
+        <span>📚 {filteredBooks.length} libros</span>
       </div>
 
       <div className="action-buttons">
         <button onClick={() => setShowAddModal(true)}>
-          ➕ Agregar Libro
+          ➕ Agregar libro
         </button>
       </div>
 
@@ -137,12 +159,31 @@ export default function Books() {
                 b.status === "IN_USE" ? "status-uso" : "status-archivo"
               }`}
             >
-              <h3>{b.volume_name}</h3>
+              <h3>
+                {b.volume_name} <small>Tomo {b.volume_number}</small>
+              </h3>
+
               <p><strong>ID:</strong> {b.id_book}</p>
-              <p><strong>Año:</strong> {b.year}</p>
-              <p><strong>Estado:</strong> {b.status}</p>
+              <p><strong>Registro:</strong> {b.register_from} – {b.register_to}</p>
+
+              {b.observations && (
+                <p><strong>Obs:</strong> {b.observations}</p>
+              )}
+
+              <p>
+                <strong>Estado:</strong>{" "}
+                {b.status === "ARCHIVED" ? "📦 En archivo" : "📖 En uso"}
+              </p>
+
+              <p className="date">
+                <strong>Creado:</strong>{" "}
+                {new Date(b.created_at).toLocaleDateString()}
+              </p>
 
               <div className="book-actions">
+                <button onClick={() => toggleStatus(b)}>
+                  🔄 Cambiar estado
+                </button>
                 <button onClick={() => setViewingBook(b)}>🔍 QR</button>
                 <button onClick={() => handleEdit(b)}>✏️</button>
                 <button onClick={() => handleDelete(b.id_book)}>🗑️</button>
@@ -150,7 +191,7 @@ export default function Books() {
             </div>
           ))
         ) : (
-          <p>No hay libros</p>
+          <p>No hay libros registrados</p>
         )}
       </div>
 
