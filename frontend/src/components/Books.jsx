@@ -36,14 +36,28 @@ export default function Books() {
   };
 
   // ===============================
-  // 🔍 FILTRO
+  // 🔍 FILTRO AVANZADO
   // ===============================
   const filteredBooks = books.filter((b) => {
-    const matchText =
-      b.volume_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.id_book?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.year?.toString().includes(searchTerm);
+    const term = searchTerm.toLowerCase();
 
+    // 🔎 Coincidencias de texto
+    const matchVolume = b.volume_name?.toLowerCase().includes(term);
+    const matchYear = b.year?.toString().includes(term);
+
+    // 🔎 Búsqueda por rango de registros
+    const registerFrom = Number(b.register_from);
+    const registerTo = Number(b.register_to);
+    const searchNumber = Number(term);
+
+    const matchRegister =
+      !isNaN(searchNumber) &&
+      searchNumber >= registerFrom &&
+      searchNumber <= registerTo;
+
+    const matchText = matchVolume || matchYear || matchRegister;
+
+    // 🔎 Filtro por estado
     const matchStatus =
       filterStatus === "todos" || b.status === filterStatus;
 
@@ -85,7 +99,7 @@ export default function Books() {
   };
 
   // ===============================
-  // 🔄 CAMBIAR ESTADO MANUAL
+  // 🔄 CAMBIAR ESTADO
   // ===============================
   const toggleStatus = async (book) => {
     const newStatus = book.status === "ARCHIVED" ? "IN_USE" : "ARCHIVED";
@@ -127,7 +141,7 @@ export default function Books() {
       <div className="books-toolbar">
         <input
           type="text"
-          placeholder="Buscar por tomo, ID o año..."
+          placeholder="Buscar por tomo, año o número de registro..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -163,8 +177,8 @@ export default function Books() {
                 {b.volume_name} <small>Tomo {b.volume_number}</small>
               </h3>
 
-              <p><strong>ID:</strong> {b.id_book}</p>
               <p><strong>Registro:</strong> {b.register_from} – {b.register_to}</p>
+              <p><strong>Año:</strong> {b.year}</p>
 
               {b.observations && (
                 <p><strong>Obs:</strong> {b.observations}</p>
@@ -175,15 +189,20 @@ export default function Books() {
                 {b.status === "ARCHIVED" ? "📦 En archivo" : "📖 En uso"}
               </p>
 
+              {/* 👤 PERSONA QUE TIENE EL LIBRO */}
+              {b.status === "IN_USE" && b.borrower_name && (
+                <p className="borrower">
+                  <strong>Prestado a:</strong> {b.borrower_name}
+                </p>
+              )}
+
               <p className="date">
                 <strong>Creado:</strong>{" "}
                 {new Date(b.created_at).toLocaleDateString()}
               </p>
 
               <div className="book-actions">
-                <button onClick={() => toggleStatus(b)}>
-                  🔄 Cambiar estado
-                </button>
+                <button onClick={() => toggleStatus(b)}>🔄</button>
                 <button onClick={() => setViewingBook(b)}>🔍 QR</button>
                 <button onClick={() => handleEdit(b)}>✏️</button>
                 <button onClick={() => handleDelete(b.id_book)}>🗑️</button>

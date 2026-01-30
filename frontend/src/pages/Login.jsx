@@ -11,6 +11,7 @@ export default function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
+    setError("");
 
     const admin = {
       user: "admin",
@@ -28,44 +29,57 @@ export default function Login() {
 
     if (username === admin.user && password === admin.pass) {
       loginUser(admin);
-      navigate("/admin"); // ✅ lleva al layout de administrador
+      navigate("/admin");
     } else if (username === user.user && password === user.pass) {
       loginUser(user);
-      navigate("/u"); // ✅ lleva al layout de usuario normal
+      navigate("/u");
     } else {
-      setError("Usuario o contraseña incorrectos");
+      setError("❌ Usuario o contraseña incorrectos");
     }
   };
 
   return (
     <div className="login-container">
       <div className="login-box">
-        <h2>📚 Sistema de Registro QR</h2>
-        <p>Control de Entradas y Salidas con Códigos QR</p>
+        <div className="login-header">
+          <span className="login-icon">📚</span>
+          <h2>Sistema de Registro QR</h2>
+          <p>Control de libros, préstamos y archivos</p>
+        </div>
 
-        <form onSubmit={handleLogin}>
-          <input
-            type="text"
-            placeholder="Usuario"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="input-group">
+            <label>Usuario</label>
+            <input
+              type="text"
+              placeholder="Ingrese su usuario"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div className="input-group">
+            <label>Contraseña</label>
+            <input
+              type="password"
+              placeholder="Ingrese su contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-          <button type="submit" className="btn btn-primary">
-            Ingresar
+          <button type="submit" className="login-btn">
+            🔐 Ingresar al sistema
           </button>
 
-          {error && <p className="error-msg">{error}</p>}
+          {error && <div className="login-error">{error}</div>}
         </form>
+
+        <div className="login-footer">
+          <small>© Sistema de Registro con QR</small>
+        </div>
       </div>
     </div>
   );

@@ -13,29 +13,31 @@ export default function Historial() {
      📥 LOAD HISTORY
   ===================== */
   useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const res = await getMovements();
-        setHistory(res.data || []);
-      } catch (error) {
-        console.error("❌ Error loading history:", error);
-      }
-    };
-
     loadHistory();
   }, []);
+
+  const loadHistory = async () => {
+    try {
+      const res = await getMovements();
+      setHistory(res.data || []);
+    } catch (error) {
+      console.error("❌ Error loading history:", error);
+    }
+  };
 
   /* =====================
      🔍 FILTER
   ===================== */
   const filteredHistory = history.filter((h) => {
-    const text =
-      h.qr_code?.toLowerCase() ||
-      h.volume_name?.toLowerCase() ||
-      "";
+    const text = `
+      ${h.qr_code || ""}
+      ${h.volume_name || ""}
+      ${h.borrowed_by || ""}
+      ${h.returned_by || ""}
+    `.toLowerCase();
 
     const textMatch = text.includes(searchTerm.toLowerCase());
-    const typeMatch = filter === "ALL" || h.movement_type === filter;
+    const typeMatch = filter === "ALL" || h.type === filter;
 
     return textMatch && typeMatch;
   });
@@ -45,43 +47,55 @@ export default function Historial() {
   ===================== */
   const exportToExcel = () => {
     const data = filteredHistory.map((h) => ({
-      "QR Code": h.qr_code,
-      "Volume": h.volume_name,
-      "Movement": h.movement_type,
-      "User": h.user_name || "—",
-      "Date": new Date(h.created_at).toLocaleString("es-ES"),
-      "Observations": h.observations || "",
+      "Código QR": h.qr_code,
+      "Tomo": h.volume_name,
+      "Movimiento": h.type === "OUT" ? "Préstamo" : "Devolución",
+      "Prestado a": h.borrowed_by || "—",
+      "Devuelto por": h.returned_by || "—",
+      "Observaciones": h.observations || "",
+      "Fecha": new Date(h.created_at).toLocaleString("es-ES"),
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "History");
-    XLSX.writeFile(wb, "Movements_History.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Historial");
+    XLSX.writeFile(wb, "Historial_Movimientos.xlsx");
   };
 
   /* =====================
      📄 EXPORT PDF
   ===================== */
   const exportToPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF("landscape");
 
-    doc.text("Movements History - QR Registry", 14, 15);
+    doc.text("Historial de Movimientos - Registro QR", 14, 15);
 
     const tableData = filteredHistory.map((h) => [
       h.qr_code,
       h.volume_name,
-      h.movement_type,
-      h.user_name || "—",
+      h.type === "OUT" ? "Préstamo" : "Devolución",
+      h.borrowed_by || "—",
+      h.returned_by || "—",
       new Date(h.created_at).toLocaleString("es-ES"),
     ]);
 
     doc.autoTable({
-      head: [["QR", "Volume", "Movement", "User", "Date"]],
+      head: [
+        [
+          "Código QR",
+          "Tomo",
+          "Movimiento",
+          "Prestado a",
+          "Devuelto por",
+          "Fecha",
+        ],
+      ],
       body: tableData,
       startY: 25,
+      styles: { fontSize: 8 },
     });
 
-    doc.save("Movements_History.pdf");
+    doc.save("Historial_Movimientos.pdf");
   };
 
   return (
@@ -92,23 +106,23 @@ export default function Historial() {
       <div className="filter-bar">
         <input
           type="text"
-          placeholder="Buscar por QR o tomo..."
+          placeholder="Buscar por QR, tomo o persona..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
         <select value={filter} onChange={(e) => setFilter(e.target.value)}>
           <option value="ALL">Todos</option>
-          <option value="LOAN">Préstamos</option>
-          <option value="RETURN">Devoluciones</option>
+          <option value="OUT">📤 Préstamos</option>
+          <option value="IN">📥 Devoluciones</option>
         </select>
 
         <button onClick={exportToExcel} className="btn btn-success">
-          📗 Exportar Excel
+          📗 Excel
         </button>
 
         <button onClick={exportToPDF} className="btn btn-danger">
-          📄 Exportar PDF
+          📄 PDF
         </button>
       </div>
 
@@ -117,17 +131,18 @@ export default function Historial() {
         <table>
           <thead>
             <tr>
-              <th>QR</th>
+              <th>Código QR</th>
               <th>Tomo</th>
               <th>Movimiento</th>
-              <th>Usuario</th>
+              <th>Prestado a</th>
+              <th>Devuelto por</th>
               <th>Fecha</th>
             </tr>
           </thead>
           <tbody>
             {filteredHistory.length === 0 ? (
               <tr>
-                <td colSpan="5" className="no-results">
+                <td colSpan="6" className="no-results">
                   No hay movimientos registrados.
                 </td>
               </tr>
@@ -136,18 +151,21 @@ export default function Historial() {
                 <tr
                   key={h.id_movement || i}
                   className={
-                    h.movement_type === "LOAN"
+                    h.type === "OUT"
                       ? "row-loan"
-                      : h.movement_type === "RETURN"
+                      : h.type === "IN"
                       ? "row-return"
                       : ""
                   }
                 >
                   <td>{h.qr_code}</td>
                   <td>{h.volume_name}</td>
-                  <td>{h.movement_type}</td>
-                  <td>{h.user_name || "—"}</td>
-                  <td>{new Date(h.created_at).toLocaleString("es-ES")}</td>
+                  <td>{h.type === "OUT" ? "📤 Préstamo" : "📥 Devolución"}</td>
+                  <td>{h.borrowed_by || "—"}</td>
+                  <td>{h.returned_by || "—"}</td>
+                  <td>
+                    {new Date(h.created_at).toLocaleString("es-ES")}
+                  </td>
                 </tr>
               ))
             )}

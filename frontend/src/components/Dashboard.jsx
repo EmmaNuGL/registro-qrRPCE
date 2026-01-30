@@ -4,8 +4,8 @@ import { getBooks } from "../services/booksService";
 import { getMovements } from "../services/movementsService";
 
 export default function Dashboard() {
-  const [booksData, setBooksData] = useState([]);
-  const [recentHistory, setRecentHistory] = useState([]);
+  const [books, setBooks] = useState([]);
+  const [movements, setMovements] = useState([]);
 
   const [stats, setStats] = useState({
     totalBooks: 0,
@@ -18,33 +18,42 @@ export default function Dashboard() {
   const [results, setResults] = useState([]);
 
   /* =====================
-     📥 LOAD BOOKS
+     📥 LOAD DATA
   ===================== */
   useEffect(() => {
-    const loadBooks = async () => {
-      try {
-        const res = await getBooks();
-        setBooksData(res.data || []);
-      } catch (error) {
-        console.error("❌ Error loading books:", error);
-      }
-    };
-
     loadBooks();
+    loadMovements();
   }, []);
+
+  const loadBooks = async () => {
+    try {
+      const res = await getBooks();
+      setBooks(res.data || []);
+    } catch (error) {
+      console.error("❌ Error loading books:", error);
+    }
+  };
+
+  const loadMovements = async () => {
+    try {
+      const res = await getMovements();
+      setMovements(res.data || []);
+    } catch (error) {
+      console.warn("⚠️ Movements not available yet");
+    }
+  };
 
   /* =====================
      📊 STATISTICS
   ===================== */
   useEffect(() => {
-    if (!Array.isArray(booksData)) return;
+    const total = books.length;
+    const archived = books.filter(b => b.status === "ARCHIVED").length;
+    const inUse = books.filter(b => b.status === "IN_USE").length;
 
-    const total = booksData.length;
-    const archived = booksData.filter(b => b.status === "ARCHIVED").length;
-    const inUse = booksData.filter(b => b.status === "IN_USE").length;
-
-    const todayMoves = recentHistory.filter(h =>
-      new Date(h.created_at).toDateString() === new Date().toDateString()
+    const today = new Date().toDateString();
+    const todayMoves = movements.filter(
+      m => new Date(m.created_at).toDateString() === today
     ).length;
 
     setStats({
@@ -53,24 +62,7 @@ export default function Dashboard() {
       inUseBooks: inUse,
       todayMovements: todayMoves,
     });
-  }, [booksData, recentHistory]);
-
-  /* =====================
-     🕒 RECENT MOVEMENTS
-  ===================== */
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const res = await getMovements();
-        const ordered = (res.data || []).slice(0, 5);
-        setRecentHistory(ordered);
-      } catch {
-        console.warn("⚠️ History not available yet");
-      }
-    };
-
-    loadHistory();
-  }, []);
+  }, [books, movements]);
 
   /* =====================
      🔍 QUICK SEARCH
@@ -84,20 +76,25 @@ export default function Dashboard() {
       return;
     }
 
-    const filtered = booksData.filter((b) => {
-      const year = b.year?.toString() || "";
-      const name = b.volume_name?.toLowerCase() || "";
-      const qr = b.qr_code?.toLowerCase() || "";
+    const filtered = books.filter((b) => {
+      const text = `
+        ${b.qr_code || ""}
+        ${b.volume_name || ""}
+        ${b.year || ""}
+        ${b.register_from || ""}
+        ${b.register_to || ""}
+      `.toLowerCase();
 
-      return (
-        year.includes(term) ||
-        name.includes(term) ||
-        qr.includes(term)
-      );
+      return text.includes(term);
     });
 
     setResults(filtered);
   };
+
+  /* =====================
+     🕒 RECENT MOVEMENTS
+  ===================== */
+  const recentMovements = movements.slice(0, 5);
 
   return (
     <div className="page dashboard">
@@ -109,14 +106,17 @@ export default function Dashboard() {
           <div className="stat-number">{stats.totalBooks}</div>
           <div>Total de Libros</div>
         </div>
+
         <div className="stat-card">
           <div className="stat-number">{stats.archivedBooks}</div>
           <div>En Archivo</div>
         </div>
+
         <div className="stat-card">
           <div className="stat-number">{stats.inUseBooks}</div>
           <div>En Uso</div>
         </div>
+
         <div className="stat-card">
           <div className="stat-number">{stats.todayMovements}</div>
           <div>Movimientos Hoy</div>
@@ -125,23 +125,27 @@ export default function Dashboard() {
 
       {/* === ACTIONS === */}
       <div className="action-buttons">
-        <button className="btn btn-primary" onClick={() => window.location.href = "/admin/escaneo"}>
+        <button
+          className="btn btn-primary"
+          onClick={() => window.location.href = "/admin/escaneo"}
+        >
           📱 Escaneo Rápido
         </button>
-        <button className="btn btn-secondary" onClick={() => window.location.href = "/admin/libros"}>
-          📖 Ver Libros
-        </button>
-        <button className="btn btn-success" onClick={() => window.location.href = "/admin/libros"}>
-          ➕ Agregar Libro
+
+        <button
+          className="btn btn-secondary"
+          onClick={() => window.location.href = "/admin/libros"}
+        >
+          📖 Gestión de Libros
         </button>
       </div>
 
       {/* === QUICK SEARCH === */}
-      <h3>🔍 Consulta Rápida de Libros</h3>
+      <h3>🔍 Consulta Rápida</h3>
       <input
         type="text"
         className="search-bar"
-        placeholder="Buscar por año, tomo o QR..."
+        placeholder="Buscar por QR, tomo, año o registro..."
         value={searchTerm}
         onChange={handleQuickSearch}
       />
@@ -152,10 +156,19 @@ export default function Dashboard() {
         ) : (
           results.map((b, i) => (
             <div key={i} className="book-preview">
-              <strong>📘 {b.year} — {b.volume_name}</strong>
+              <strong>
+                📘 {b.year} — {b.volume_name}
+              </strong>
               <p>QR: {b.qr_code}</p>
-              <span className={`status-tag ${b.status === "IN_USE" ? "inuse" : "archived"}`}>
-                {b.status}
+              <p>
+                Registro: {b.register_from} – {b.register_to}
+              </p>
+              <span
+                className={`status-tag ${
+                  b.status === "IN_USE" ? "inuse" : "archived"
+                }`}
+              >
+                {b.status === "IN_USE" ? "EN USO" : "ARCHIVO"}
               </span>
             </div>
           ))
@@ -166,22 +179,34 @@ export default function Dashboard() {
       <h3>🕒 Actividades Recientes</h3>
 
       <div className="recent-history">
-        {recentHistory.map((h, i) => (
-          <div key={h.id_movement || i} className="history-item">
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <strong>📘 {h.volume_name}</strong>
-              <small>{new Date(h.created_at).toLocaleString("es-ES")}</small>
-            </div>
+        {recentMovements.length === 0 ? (
+          <p className="no-results">No hay movimientos recientes</p>
+        ) : (
+          recentMovements.map((m, i) => (
+            <div key={m.id_movement || i} className="history-item">
+              <div className="history-header">
+                <strong>📘 {m.volume_name}</strong>
+                <small>
+                  {new Date(m.created_at).toLocaleString("es-ES")}
+                </small>
+              </div>
 
-            <div style={{ fontSize: "0.9rem", color: "#444" }}>
-              👤 {h.user_name || "—"} | 🔄 {h.movement_type}
-            </div>
+              <div className="history-body">
+                {m.type === "OUT" ? (
+                  <span>📤 Prestado a: <strong>{m.borrowed_by}</strong></span>
+                ) : (
+                  <span>📥 Devuelto por: <strong>{m.returned_by}</strong></span>
+                )}
+              </div>
 
-            {h.observations && (
-              <p style={{ fontStyle: "italic" }}>{h.observations}</p>
-            )}
-          </div>
-        ))}
+              {m.observations && (
+                <p className="history-observation">
+                  {m.observations}
+                </p>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
