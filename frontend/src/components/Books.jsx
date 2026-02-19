@@ -159,8 +159,20 @@ export default function Books() {
       </div>
 
       <div className="action-buttons">
-        <button onClick={() => setShowAddModal(true)}>
+        <button className="btn-add" onClick={() => setShowAddModal(true)}>
           ➕ Agregar libro
+        </button>
+        <button
+          className="btn-vista"
+          onClick={() => (window.location.href = "/admin/biblioteca-2d")}
+        >
+          📚 Vista Biblioteca 2D
+        </button>
+        <button className="btn-export" onClick={() => console.log("Exportar Lista")}>
+          📤 Exportar Lista
+        </button>
+        <button className="btn-qr" onClick={() => console.log("Exportar Etiquetas QR")}>
+          🏷️ Exportar Etiquetas QR
         </button>
       </div>
 

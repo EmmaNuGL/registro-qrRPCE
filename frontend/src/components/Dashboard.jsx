@@ -17,9 +17,6 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
 
-  /* =====================
-     📥 LOAD DATA
-  ===================== */
   useEffect(() => {
     loadBooks();
     loadMovements();
@@ -43,9 +40,6 @@ export default function Dashboard() {
     }
   };
 
-  /* =====================
-     📊 STATISTICS
-  ===================== */
   useEffect(() => {
     const total = books.length;
     const archived = books.filter(b => b.status === "ARCHIVED").length;
@@ -64,9 +58,6 @@ export default function Dashboard() {
     });
   }, [books, movements]);
 
-  /* =====================
-     🔍 QUICK SEARCH
-  ===================== */
   const handleQuickSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
@@ -91,49 +82,46 @@ export default function Dashboard() {
     setResults(filtered);
   };
 
-  /* =====================
-     🕒 RECENT MOVEMENTS
-  ===================== */
   const recentMovements = movements.slice(0, 5);
 
   return (
-    <div className="page dashboard">
-      <h2>📊 Panel Principal</h2>
+    <div className="dashboard-container">
+      <h2 className="dashboard-title">📊 Panel Principal</h2>
 
       {/* === STATISTICS === */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-number">{stats.totalBooks}</div>
-          <div>Total de Libros</div>
+      <div className="stats-grid-modern">
+        <div className="stat-card-modern">
+          <div className="stat-number-modern">{stats.totalBooks}</div>
+          <div className="stat-label-modern">Total de Libros</div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-number">{stats.archivedBooks}</div>
-          <div>En Archivo</div>
+        <div className="stat-card-modern">
+          <div className="stat-number-modern">{stats.archivedBooks}</div>
+          <div className="stat-label-modern">En Archivo</div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-number">{stats.inUseBooks}</div>
-          <div>En Uso</div>
+        <div className="stat-card-modern">
+          <div className="stat-number-modern">{stats.inUseBooks}</div>
+          <div className="stat-label-modern">En Uso</div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-number">{stats.todayMovements}</div>
-          <div>Movimientos Hoy</div>
+        <div className="stat-card-modern">
+          <div className="stat-number-modern">{stats.todayMovements}</div>
+          <div className="stat-label-modern">Movimientos Hoy</div>
         </div>
       </div>
 
       {/* === ACTIONS === */}
-      <div className="action-buttons">
+      <div className="action-buttons-modern">
         <button
-          className="btn btn-primary"
+          className="action-btn primary"
           onClick={() => window.location.href = "/admin/escaneo"}
         >
           📱 Escaneo Rápido
         </button>
 
         <button
-          className="btn btn-secondary"
+          className="action-btn secondary"
           onClick={() => window.location.href = "/admin/libros"}
         >
           📖 Gestión de Libros
@@ -141,72 +129,76 @@ export default function Dashboard() {
       </div>
 
       {/* === QUICK SEARCH === */}
-      <h3>🔍 Consulta Rápida</h3>
-      <input
-        type="text"
-        className="search-bar"
-        placeholder="Buscar por QR, tomo, año o registro..."
-        value={searchTerm}
-        onChange={handleQuickSearch}
-      />
+      <div className="dashboard-section">
+        <h3>🔍 Consulta Rápida</h3>
+        <input
+          type="text"
+          className="search-bar-modern"
+          placeholder="Buscar por QR, tomo, año o registro..."
+          value={searchTerm}
+          onChange={handleQuickSearch}
+        />
 
-      <div className="quick-results">
-        {results.length === 0 && searchTerm !== "" ? (
-          <p className="no-results">No se encontraron resultados</p>
-        ) : (
-          results.map((b, i) => (
-            <div key={i} className="book-preview">
-              <strong>
-                📘 {b.year} — {b.volume_name}
-              </strong>
-              <p>QR: {b.qr_code}</p>
-              <p>
-                Registro: {b.register_from} – {b.register_to}
-              </p>
-              <span
-                className={`status-tag ${
-                  b.status === "IN_USE" ? "inuse" : "archived"
-                }`}
-              >
-                {b.status === "IN_USE" ? "EN USO" : "ARCHIVO"}
-              </span>
-            </div>
-          ))
-        )}
+        <div className="quick-results-modern">
+          {results.length === 0 && searchTerm !== "" ? (
+            <p className="no-results">No se encontraron resultados</p>
+          ) : (
+            results.map((b, i) => (
+              <div key={i} className="book-preview-modern">
+                <strong>
+                  📘 {b.year} — {b.volume_name}
+                </strong>
+                <p>QR: {b.qr_code}</p>
+                <p>
+                  Registro: {b.register_from} – {b.register_to}
+                </p>
+                <span
+                  className={`status-tag ${
+                    b.status === "IN_USE" ? "inuse" : "archived"
+                  }`}
+                >
+                  {b.status === "IN_USE" ? "EN USO" : "ARCHIVO"}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* === RECENT ACTIVITY === */}
-      <h3>🕒 Actividades Recientes</h3>
+      <div className="dashboard-section">
+        <h3>🕒 Actividades Recientes</h3>
 
-      <div className="recent-history">
-        {recentMovements.length === 0 ? (
-          <p className="no-results">No hay movimientos recientes</p>
-        ) : (
-          recentMovements.map((m, i) => (
-            <div key={m.id_movement || i} className="history-item">
-              <div className="history-header">
-                <strong>📘 {m.volume_name}</strong>
-                <small>
-                  {new Date(m.created_at).toLocaleString("es-ES")}
-                </small>
-              </div>
+        <div className="recent-history-modern">
+          {recentMovements.length === 0 ? (
+            <p className="no-results">No hay movimientos recientes</p>
+          ) : (
+            recentMovements.map((m, i) => (
+              <div key={m.id_movement || i} className="history-item-modern">
+                <div className="history-header-modern">
+                  <strong>📘 {m.volume_name}</strong>
+                  <small>
+                    {new Date(m.created_at).toLocaleString("es-ES")}
+                  </small>
+                </div>
 
-              <div className="history-body">
-                {m.type === "OUT" ? (
-                  <span>📤 Prestado a: <strong>{m.borrowed_by}</strong></span>
-                ) : (
-                  <span>📥 Devuelto por: <strong>{m.returned_by}</strong></span>
+                <div className="history-body-modern">
+                  {m.type === "OUT" ? (
+                    <span>📤 Prestado a: <strong>{m.borrowed_by}</strong></span>
+                  ) : (
+                    <span>📥 Devuelto por: <strong>{m.returned_by}</strong></span>
+                  )}
+                </div>
+
+                {m.observations && (
+                  <p className="history-observation">
+                    {m.observations}
+                  </p>
                 )}
               </div>
-
-              {m.observations && (
-                <p className="history-observation">
-                  {m.observations}
-                </p>
-              )}
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
