@@ -728,3 +728,28 @@ div:has(> button) {
   gap: 16px;
   align-items: center;
 }
+/* =====================================================
+   🔘 ESTILO UNIFICADO DE BOTONES DEL SISTEMA
+===================================================== */
+
+/* Solo afecta botones normales que NO tengan clase */
+button:not(.btn):not(.login-btn):not(.collapse-btn):not(.logout-btn) {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
+  min-height: 42px;
+}
+
+/* Hover elegante */
+button:not(.btn):not(.login-btn):not(.collapse-btn):not(.logout-btn):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+}
+
+/* Espaciado automático SOLO entre botones seguidos */
+button + button {
+  margin-left: 14px;
+}
