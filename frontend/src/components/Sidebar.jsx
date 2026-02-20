@@ -2,63 +2,86 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { getCurrentUser } from "../utils/sessionManager";
 
-const Item = ({ to, icon, children }) => (
+const Item = ({ to, icon, children, collapsed, exact }) => (
   <NavLink
     to={to}
+    end={exact}
     className={({ isActive }) =>
-      "nav-item" + (isActive ? " active" : "")
+      "nav-item-modern" + (isActive ? " active" : "")
     }
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      padding: "10px 12px",
-      borderRadius: 12,
-      color: "#1f2937",
-      textDecoration: "none",
-      fontWeight: 600
-    }}
   >
-    <span style={{ width: 22, textAlign: "center" }}>{icon}</span>
-    <span>{children}</span>
+    <span className="nav-icon">{icon}</span>
+    {!collapsed && <span className="nav-label">{children}</span>}
   </NavLink>
 );
 
-export default function Sidebar({ variant = "admin" }) {
+export default function Sidebar({ collapsed, setCollapsed }) {
   const user = getCurrentUser();
   const isAdmin = user?.role === "Administrador" || user?.role === "admin";
-
   const base = isAdmin ? "/admin" : "/u";
 
   return (
-    <aside
-      className="sidebar"
-      style={{
-        background: "linear-gradient(180deg,#f2f4ff,#f5f0ff)",
-        borderRight: "1px solid #e9ecef",
-        padding: 16
-      }}
-    >
-      {isAdmin ? (
-        <>
-          <Item to={`${base}`}>📊 Panel Principal</Item>
-          <Item to={`${base}/escaneo`}>📱 Escaneo QR</Item>
-          <Item to={`${base}/libros`}>📚 Gestión de Libros</Item>
-          <Item to={`${base}/historial`}>🕒 Historial</Item>
-          <Item to={`${base}/reportes`}>📈 Reportes</Item>
-          <Item to={`${base}/usuarios`}>👥 Usuarios</Item>
-          <Item to={`${base}/configuracion`}>⚙️ Configuración</Item>
-          <div style={{ height: 12 }} />
-          <Item to={`${base}/biblioteca-2d`}>📖 Biblioteca 2D (Solo lectura)</Item>
-        </>
-      ) : (
-        <>
-          <div style={{ fontWeight: 700, margin: "8px 8px 12px", color: "#374151" }}>
-            📖 Biblioteca 2D (Solo Lectura)
-          </div>
-          <Item to={`${base}`}>🔎 Buscar libros</Item>
-        </>
-      )}
+    <aside className={`sidebar-modern ${collapsed ? "collapsed" : ""}`}>
+      
+      <div className="sidebar-header">
+        {!collapsed && <h3>📚 Sistema</h3>}
+        <button
+          className="collapse-btn"
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          ☰
+        </button>
+      </div>
+
+      <div className="sidebar-content">
+        {isAdmin ? (
+          <>
+            {/* 👇 SOLO ESTE LLEVA exact */}
+            <Item 
+              to={`${base}`} 
+              icon="📊" 
+              collapsed={collapsed} 
+              exact
+            >
+              Panel Principal
+            </Item>
+
+            <Item to={`${base}/escaneo`} icon="📱" collapsed={collapsed}>
+              Escaneo QR
+            </Item>
+
+            <Item to={`${base}/libros`} icon="📚" collapsed={collapsed}>
+              Gestión de Libros
+            </Item>
+
+            <Item to={`${base}/historial`} icon="🕒" collapsed={collapsed}>
+              Historial
+            </Item>
+
+            <Item to={`${base}/reportes`} icon="📈" collapsed={collapsed}>
+              Reportes
+            </Item>
+
+            <Item to={`${base}/usuarios`} icon="👥" collapsed={collapsed}>
+              Usuarios
+            </Item>
+
+            <Item to={`${base}/configuracion`} icon="⚙️" collapsed={collapsed}>
+              Configuración
+            </Item>
+
+            <div className="sidebar-divider" />
+
+            <Item to={`${base}/biblioteca-2d`} icon="📖" collapsed={collapsed}>
+              Biblioteca 2D
+            </Item>
+          </>
+        ) : (
+          <Item to={`${base}`} icon="🔎" collapsed={collapsed} exact>
+            Buscar libros
+          </Item>
+        )}
+      </div>
     </aside>
   );
 }
