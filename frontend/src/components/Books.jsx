@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import AddBookModal from "./modals/AddBookModal";
 import EditBookModal from "./modals/EditBookModal";
 import ViewQRModal from "./modals/ViewQRModal";
+import LoanModal from "./Modals/LoanModal";
 
 import {
   getBooks,
@@ -18,6 +19,7 @@ export default function Books() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
   const [viewingBook, setViewingBook] = useState(null);
+  const [loanBook, setLoanBook] = useState(null); // 🔹 NUEVO
 
   // ===============================
   // 🔹 CARGA INICIAL
@@ -41,11 +43,9 @@ export default function Books() {
   const filteredBooks = books.filter((b) => {
     const term = searchTerm.toLowerCase();
 
-    // 🔎 Coincidencias de texto
     const matchVolume = b.volume_name?.toLowerCase().includes(term);
     const matchYear = b.year?.toString().includes(term);
 
-    // 🔎 Búsqueda por rango de registros
     const registerFrom = Number(b.register_from);
     const registerTo = Number(b.register_to);
     const searchNumber = Number(term);
@@ -57,7 +57,6 @@ export default function Books() {
 
     const matchText = matchVolume || matchYear || matchRegister;
 
-    // 🔎 Filtro por estado
     const matchStatus =
       filterStatus === "todos" || b.status === filterStatus;
 
@@ -95,28 +94,6 @@ export default function Books() {
       );
     } catch {
       alert("❌ Error al actualizar libro");
-    }
-  };
-
-  // ===============================
-  // 🔄 CAMBIAR ESTADO
-  // ===============================
-  const toggleStatus = async (book) => {
-    const newStatus = book.status === "ARCHIVED" ? "IN_USE" : "ARCHIVED";
-
-    try {
-      const res = await updateBook(book.id_book, {
-        ...book,
-        status: newStatus,
-      });
-
-      setBooks(
-        books.map((b) =>
-          b.id_book === book.id_book ? res.data : b
-        )
-      );
-    } catch {
-      alert("❌ Error al cambiar estado");
     }
   };
 
@@ -168,10 +145,10 @@ export default function Books() {
         >
           📚 Vista Biblioteca 2D
         </button>
-        <button className="btn-export" onClick={() => console.log("Exportar Lista")}>
+        <button className="btn-export">
           📤 Exportar Lista
         </button>
-        <button className="btn-qr" onClick={() => console.log("Exportar Etiquetas QR")}>
+        <button className="btn-qr">
           🏷️ Exportar Etiquetas QR
         </button>
       </div>
@@ -201,20 +178,13 @@ export default function Books() {
                 {b.status === "ARCHIVED" ? "📦 En archivo" : "📖 En uso"}
               </p>
 
-              {/* 👤 PERSONA QUE TIENE EL LIBRO */}
-              {b.status === "IN_USE" && b.borrower_name && (
-                <p className="borrower">
-                  <strong>Prestado a:</strong> {b.borrower_name}
-                </p>
-              )}
-
               <p className="date">
                 <strong>Creado:</strong>{" "}
                 {new Date(b.created_at).toLocaleDateString()}
               </p>
 
               <div className="book-actions">
-                <button onClick={() => toggleStatus(b)}>🔄</button>
+                <button onClick={() => setLoanBook(b)}>🔄</button>
                 <button onClick={() => setViewingBook(b)}>🔍 QR</button>
                 <button onClick={() => handleEdit(b)}>✏️</button>
                 <button onClick={() => handleDelete(b.id_book)}>🗑️</button>
@@ -243,6 +213,15 @@ export default function Books() {
         <ViewQRModal
           book={viewingBook}
           onClose={() => setViewingBook(null)}
+        />
+      )}
+
+      {/* 🔥 MODAL DE PRÉSTAMO / DEVOLUCIÓN */}
+      {loanBook && (
+        <LoanModal
+          book={loanBook}
+          onClose={() => setLoanBook(null)}
+          onSuccess={loadBooks}
         />
       )}
     </div>

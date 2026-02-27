@@ -1,206 +1,160 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   createLoan,
   closeLoan,
   getActiveLoanByBook,
-} from "../services/loansService";
-import { createMovement } from "../services/movementsService";
-import { updateBook } from "../services/booksService";
+} from "../../services/loansService";
 
 export default function LoanModal({ book, onClose, onSuccess }) {
+
   const isInUse = book.status === "IN_USE";
 
-  // 🔹 préstamo
-  const [borrowedBy, setBorrowedBy] = useState("");
-  const [borrowerRole, setBorrowerRole] = useState("");
-  const [loanObs, setLoanObs] = useState("");
+  const [person, setPerson] = useState("");
+  const [observations, setObservations] = useState("");
 
-  // 🔹 devolución
   const [activeLoan, setActiveLoan] = useState(null);
-  const [samePerson, setSamePerson] = useState(true);
   const [returnedBy, setReturnedBy] = useState("");
-  const [returnObs, setReturnObs] = useState("");
+  const [loadingLoan, setLoadingLoan] = useState(false);
 
-  // ===============================
-  // 🔍 CARGAR PRÉSTAMO ACTIVO
-  // ===============================
+  // 🔥 Resetear estados cuando cambia el libro
   useEffect(() => {
-    if (isInUse) {
+    setActiveLoan(null);
+    setReturnedBy("");
+
+    if (book.status === "IN_USE") {
       loadActiveLoan();
     }
-  }, [book]);
+  }, [book.id_book, book.status]);
 
   const loadActiveLoan = async () => {
     try {
+      setLoadingLoan(true);
       const res = await getActiveLoanByBook(book.id_book);
       setActiveLoan(res.data);
-    } catch {
-      alert("❌ Error cargando préstamo activo");
+    } catch (err) {
+      console.error("Error cargando préstamo activo:", err);
+    } finally {
+      setLoadingLoan(false);
     }
   };
 
-  // ===============================
-  // 📤 PRESTAR
-  // ===============================
   const handleLoan = async () => {
-    if (!borrowedBy.trim()) {
-      alert("⚠️ Debes indicar quién retira el libro");
+    if (!person.trim()) {
+      alert("Debe indicar la persona");
       return;
     }
 
     try {
-      // 1️⃣ crear préstamo
-      const loan = await createLoan({
-        id_book: book.id_book,
-        borrowed_by: borrowedBy,
-        borrower_role: borrowerRole,
-        observations: loanObs,
-      });
-
-      // 2️⃣ movimiento OUT
-      await createMovement({
-        id_book: book.id_book,
-        type: "OUT",
-        borrowed_by: borrowedBy,
-        observations: loanObs,
-      });
-
-      // 3️⃣ actualizar libro
-      await updateBook(book.id_book, {
-        ...book,
-        status: "IN_USE",
+      await createLoan({
+        book_id: book.id_book,
+        person: person,
+        observations: observations,
       });
 
       onSuccess();
       onClose();
-    } catch {
-      alert("❌ Error al prestar libro");
+    } catch (err) {
+      console.error(err);
+      alert("Error al prestar");
     }
   };
 
-  // ===============================
-  // 📥 DEVOLVER
-  // ===============================
   const handleReturn = async () => {
-    const finalReturnedBy = samePerson
-      ? activeLoan.borrowed_by
-      : returnedBy;
+    if (!returnedBy.trim()) {
+      alert("Debe indicar quién devuelve");
+      return;
+    }
 
-    if (!finalReturnedBy.trim()) {
-      alert("⚠️ Debes indicar quién devuelve el libro");
+    if (!activeLoan) {
+      alert("No se encontró préstamo activo");
       return;
     }
 
     try {
-      // 1️⃣ cerrar préstamo
-      await closeLoan(activeLoan.id_loan);
-
-      // 2️⃣ movimiento IN
-      await createMovement({
-        id_book: book.id_book,
-        type: "IN",
-        borrowed_by: activeLoan.borrowed_by,
-        returned_by: finalReturnedBy,
-        observations: returnObs,
-      });
-
-      // 3️⃣ actualizar libro
-      await updateBook(book.id_book, {
-        ...book,
-        status: "ARCHIVED",
+      await closeLoan(activeLoan.id, {
+        returned_by: returnedBy,
       });
 
       onSuccess();
       onClose();
-    } catch {
-      alert("❌ Error al devolver libro");
+    } catch (err) {
+      console.error(err);
+      alert("Error al devolver");
     }
   };
 
-  // ===============================
-  // 🧩 UI
-  // ===============================
   return (
     <div className="modal-overlay">
       <div className="modal-box">
+
         <h2>
-          {isInUse ? "📥 Devolver libro" : "📤 Prestar libro"}
+          {isInUse ? "Devolver libro" : "Prestar libro"}
         </h2>
 
         <p>
           <strong>{book.volume_name}</strong> — Tomo {book.volume_number}
         </p>
 
-        {/* ================= PRÉSTAMO ================= */}
+        {/* ===================== PRESTAR ===================== */}
         {!isInUse && (
           <>
             <input
               type="text"
-              placeholder="Nombre de quien retira *"
-              value={borrowedBy}
-              onChange={(e) => setBorrowedBy(e.target.value)}
-            />
-
-            <input
-              type="text"
-              placeholder="Cargo / dependencia"
-              value={borrowerRole}
-              onChange={(e) => setBorrowerRole(e.target.value)}
+              placeholder="Persona *"
+              value={person}
+              onChange={(e) => setPerson(e.target.value)}
             />
 
             <textarea
               placeholder="Observaciones"
-              value={loanObs}
-              onChange={(e) => setLoanObs(e.target.value)}
+              value={observations}
+              onChange={(e) => setObservations(e.target.value)}
             />
 
-            <button onClick={handleLoan} className="btn-primary">
-              📤 Prestar libro
+            <button onClick={handleLoan}>
+              Prestar
             </button>
           </>
         )}
 
-        {/* ================= DEVOLUCIÓN ================= */}
-        {isInUse && activeLoan && (
+        {/* ===================== DEVOLVER ===================== */}
+        {isInUse && (
           <>
-            <p>
-              <strong>Prestado a:</strong>{" "}
-              {activeLoan.borrowed_by}
-            </p>
-
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={samePerson}
-                onChange={() => setSamePerson(!samePerson)}
-              />
-              Devuelto por el mismo funcionario
-            </label>
-
-            {!samePerson && (
-              <input
-                type="text"
-                placeholder="Nombre de quien devuelve *"
-                value={returnedBy}
-                onChange={(e) => setReturnedBy(e.target.value)}
-              />
+            {loadingLoan && (
+              <p>Cargando información del préstamo...</p>
             )}
 
-            <textarea
-              placeholder="Observaciones de devolución"
-              value={returnObs}
-              onChange={(e) => setReturnObs(e.target.value)}
-            />
+            {!loadingLoan && activeLoan && (
+              <>
+                <p>
+                  Prestado a: <strong>{activeLoan.person}</strong>
+                </p>
 
-            <button onClick={handleReturn} className="btn-success">
-              📥 Registrar devolución
-            </button>
+                <input
+                  type="text"
+                  placeholder="Devuelto por *"
+                  value={returnedBy}
+                  onChange={(e) => setReturnedBy(e.target.value)}
+                />
+
+                <button onClick={handleReturn}>
+                  Registrar devolución
+                </button>
+              </>
+            )}
+
+            {!loadingLoan && !activeLoan && (
+              <p style={{ color: "red" }}>
+                No se encontró préstamo activo para este libro.
+              </p>
+            )}
           </>
         )}
 
-        <button onClick={onClose} className="btn-cancel">
+        <button onClick={onClose}>
           Cancelar
         </button>
+
       </div>
     </div>
   );

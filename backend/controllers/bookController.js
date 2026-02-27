@@ -80,11 +80,11 @@ const getBookById = async (req, res) => {
 ================================ */
 const getBookByQR = async (req, res) => {
   try {
-    const { qr } = req.params;
+    const { codigo_qr } = req.params;
 
     const result = await pool.query(
       'SELECT * FROM books WHERE qr_code = $1',
-      [qr]
+      [codigo_qr]
     );
 
     if (!result.rows.length) {
@@ -98,25 +98,78 @@ const getBookByQR = async (req, res) => {
 };
 
 /* ===============================
-   UPDATE BOOK STATUS
+   UPDATE BOOK STATUS (WITH MOVEMENT)
 ================================ */
 const updateBookStatus = async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, person, user_id, observations } = req.body;
 
-    const result = await pool.query(
-      'UPDATE books SET status = $1 WHERE id_book = $2 RETURNING *',
+    await client.query("BEGIN");
+
+    // 1️⃣ Obtener libro actual
+    const currentBook = await client.query(
+      "SELECT * FROM books WHERE id_book = $1",
+      [id]
+    );
+
+    if (!currentBook.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    const oldStatus = currentBook.rows[0].status;
+
+    // Si no cambia el estado, no registramos movimiento
+    if (oldStatus === status) {
+      await client.query("ROLLBACK");
+      return res.json(currentBook.rows[0]);
+    }
+
+    // 2️⃣ Actualizar estado
+    const updatedBook = await client.query(
+      "UPDATE books SET status = $1 WHERE id_book = $2 RETURNING *",
       [status, id]
     );
 
-    if (!result.rows.length) {
-      return res.status(404).json({ error: 'Book not found' });
+    // 3️⃣ Determinar acción
+    let action = null;
+
+    if (oldStatus === "ARCHIVED" && status === "IN_USE") {
+      action = "OUT"; // Préstamo
     }
 
-    res.json(result.rows[0]);
+    if (oldStatus === "IN_USE" && status === "ARCHIVED") {
+      action = "IN"; // Devolución
+    }
+
+    // 4️⃣ Insertar movimiento
+    await client.query(
+      `INSERT INTO movements
+       (book_id, user_id, previous_state, new_state, action, person, observations, date_time)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
+      [
+        id.toString(),
+        user_id || null,
+        oldStatus,
+        status,
+        action,
+        person || "No especificado",
+        observations || null
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    res.json(updatedBook.rows[0]);
+
   } catch (error) {
+    await client.query("ROLLBACK");
     res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
   }
 };
 

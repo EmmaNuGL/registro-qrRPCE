@@ -7,6 +7,7 @@ const pool = require('./config/db');
 const booksRoutes = require('./routes/books.routes');
 const movementsRoutes = require('./routes/movements.routes');
 const usersRoutes = require('./routes/users.routes');
+const loansRoutes = require("./routes/loansRoutes");
 
 const app = express();
 
@@ -18,7 +19,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api/books', booksRoutes);
 app.use('/api/movements', movementsRoutes);
 app.use('/api/users', usersRoutes);
-
+app.use("/api/loans", loansRoutes);
 // 🧠 Base route
 app.get('/', (req, res) => {
   res.send('✅ QR Management System API running correctly');
