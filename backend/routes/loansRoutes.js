@@ -18,6 +18,11 @@ router.get("/active/:book_id", loansController.getActiveLoanByBook);
 router.put("/close/:id", loansController.closeLoan);
 
 // ==========================
+// Forzar regularización
+// ==========================
+router.put("/force", loansController.forceArchive);
+
+// ==========================
 // Listar todos los préstamos
 // ==========================
 router.get("/", loansController.getAllLoans);

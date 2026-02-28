@@ -3,6 +3,7 @@ import {
   createLoan,
   closeLoan,
   getActiveLoanByBook,
+  forceArchive
 } from "../../services/loansService";
 
 export default function LoanModal({ book, onClose, onSuccess }) {
@@ -14,12 +15,15 @@ export default function LoanModal({ book, onClose, onSuccess }) {
 
   const [activeLoan, setActiveLoan] = useState(null);
   const [returnedBy, setReturnedBy] = useState("");
+  const [useOriginalName, setUseOriginalName] = useState(true);
+
   const [loadingLoan, setLoadingLoan] = useState(false);
 
   // 🔥 Resetear estados cuando cambia el libro
   useEffect(() => {
     setActiveLoan(null);
     setReturnedBy("");
+    setUseOriginalName(true);
 
     if (book.status === "IN_USE") {
       loadActiveLoan();
@@ -38,6 +42,7 @@ export default function LoanModal({ book, onClose, onSuccess }) {
     }
   };
 
+  // ===================== PRESTAR =====================
   const handleLoan = async () => {
     if (!person.trim()) {
       alert("Debe indicar la persona");
@@ -47,7 +52,7 @@ export default function LoanModal({ book, onClose, onSuccess }) {
     try {
       await createLoan({
         book_id: book.id_book,
-        person: person,
+        person: person.trim(),
         observations: observations,
       });
 
@@ -59,20 +64,26 @@ export default function LoanModal({ book, onClose, onSuccess }) {
     }
   };
 
+  // ===================== DEVOLVER NORMAL =====================
   const handleReturn = async () => {
-    if (!returnedBy.trim()) {
-      alert("Debe indicar quién devuelve");
-      return;
-    }
 
     if (!activeLoan) {
       alert("No se encontró préstamo activo");
       return;
     }
 
+    const finalReturnedBy = useOriginalName
+      ? activeLoan.person
+      : returnedBy;
+
+    if (!finalReturnedBy || !finalReturnedBy.trim()) {
+      alert("Debe indicar quién devuelve");
+      return;
+    }
+
     try {
       await closeLoan(activeLoan.id, {
-        returned_by: returnedBy,
+        returned_by: finalReturnedBy.trim()
       });
 
       onSuccess();
@@ -80,6 +91,21 @@ export default function LoanModal({ book, onClose, onSuccess }) {
     } catch (err) {
       console.error(err);
       alert("Error al devolver");
+    }
+  };
+
+  // ===================== FORZAR REGULARIZACIÓN =====================
+  const handleForceArchive = async () => {
+    try {
+      await forceArchive({
+        book_id: book.id_book
+      });
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("Error al forzar regularización");
     }
   };
 
@@ -130,10 +156,25 @@ export default function LoanModal({ book, onClose, onSuccess }) {
                   Prestado a: <strong>{activeLoan.person}</strong>
                 </p>
 
+                {/* 🔹 Checkbox inteligente */}
+                <label style={{ display: "block", marginBottom: "5px" }}>
+                  <input
+                    type="checkbox"
+                    checked={useOriginalName}
+                    onChange={() => setUseOriginalName(!useOriginalName)}
+                  />
+                  Usar nombre original del préstamo
+                </label>
+
                 <input
                   type="text"
                   placeholder="Devuelto por *"
-                  value={returnedBy}
+                  value={
+                    useOriginalName
+                      ? activeLoan.person
+                      : returnedBy
+                  }
+                  disabled={useOriginalName}
                   onChange={(e) => setReturnedBy(e.target.value)}
                 />
 
@@ -143,10 +184,20 @@ export default function LoanModal({ book, onClose, onSuccess }) {
               </>
             )}
 
+            {/* 🔥 Caso inconsistente */}
             {!loadingLoan && !activeLoan && (
-              <p style={{ color: "red" }}>
-                No se encontró préstamo activo para este libro.
-              </p>
+              <>
+                <p style={{ color: "red" }}>
+                  No se encontró préstamo activo para este libro.
+                </p>
+
+                <button
+                  style={{ backgroundColor: "#d9534f", color: "white" }}
+                  onClick={handleForceArchive}
+                >
+                  🔧 Forzar regularización (Administrador)
+                </button>
+              </>
             )}
           </>
         )}

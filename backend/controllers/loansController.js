@@ -4,48 +4,43 @@ const db = require("../config/db");
 // 🔹 Crear préstamo
 // =============================
 exports.createLoan = async (req, res) => {
+  const client = await db.connect();
+
   try {
-    console.log("========== CREATE LOAN ==========");
-    console.log("📥 BODY RECIBIDO:", req.body);
+    await client.query("BEGIN");
 
     const { book_id, person, observations } = req.body;
 
-    // Validación básica
     if (!book_id || !person || !person.trim()) {
-      console.log("❌ Datos inválidos");
+      await client.query("ROLLBACK");
       return res.status(400).json({ error: "Faltan datos obligatorios" });
     }
 
-    // Verificar que el libro exista
-    const book = await db.query(
-      `SELECT status FROM books WHERE id_book = $1`,
+    const bookResult = await client.query(
+      `SELECT status FROM books WHERE id_book = $1 FOR UPDATE`,
       [book_id]
     );
 
-    console.log("📚 Resultado SELECT libro:", book.rows);
-
-    if (book.rows.length === 0) {
-      console.log("❌ Libro no encontrado");
+    if (bookResult.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ error: "Libro no encontrado" });
     }
 
-    const currentStatus = book.rows[0].status;
-    console.log("📊 Estado actual en BD:", currentStatus);
+    const currentStatus = bookResult.rows[0].status;
 
-    // Si está en uso, no se puede prestar
     if (currentStatus === "IN_USE") {
-      console.log("❌ Libro ya está prestado");
+      await client.query("ROLLBACK");
       return res.status(400).json({ error: "El libro ya está prestado" });
     }
 
-    // 🔥 Aquí permitimos prestar cuando está ARCHIVED
     if (currentStatus !== "ARCHIVED") {
-      console.log("❌ Estado inesperado:", currentStatus);
-      return res.status(400).json({ error: "Estado del libro no válido para préstamo" });
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: "Estado del libro no válido para préstamo",
+      });
     }
 
-    // Crear préstamo
-    const loanResult = await db.query(
+    const loanResult = await client.query(
       `INSERT INTO loans 
        (book_id, person, loan_date, status, observations)
        VALUES ($1, $2, NOW(), 'ACTIVE', $3)
@@ -53,21 +48,23 @@ exports.createLoan = async (req, res) => {
       [book_id, person.trim(), observations || null]
     );
 
-    // Marcar libro como en uso
-    await db.query(
+    await client.query(
       `UPDATE books
-       SET status = $1
-       WHERE id_book = $2`,
-      ['IN_USE', book_id]
+       SET status = 'IN_USE'
+       WHERE id_book = $1`,
+      [book_id]
     );
 
-    console.log("✅ Préstamo creado correctamente");
+    await client.query("COMMIT");
 
     res.json(loanResult.rows[0]);
 
   } catch (error) {
-    console.error("🔥 ERROR COMPLETO createLoan:", error);
+    await client.query("ROLLBACK");
+    console.error("🔥 ERROR createLoan:", error);
     res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
   }
 };
 
@@ -89,11 +86,7 @@ exports.getActiveLoanByBook = async (req, res) => {
       [book_id]
     );
 
-    if (result.rows.length === 0) {
-      return res.json(null);
-    }
-
-    res.json(result.rows[0]);
+    res.json(result.rows[0] || null);
 
   } catch (error) {
     console.error("🔥 ERROR getActiveLoanByBook:", error);
@@ -103,53 +96,96 @@ exports.getActiveLoanByBook = async (req, res) => {
 
 
 // =============================
-// 🔹 Devolver libro
+// 🔹 Cerrar préstamo normal
 // =============================
 exports.closeLoan = async (req, res) => {
+  const client = await db.connect();
+
   try {
-    console.log("========== CLOSE LOAN ==========");
+    await client.query("BEGIN");
 
     const { id } = req.params;
     const { returned_by } = req.body;
 
     if (!returned_by || !returned_by.trim()) {
-      console.log("❌ Falta returned_by");
-      return res.status(400).json({ error: "Debe indicar quién devuelve el libro" });
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: "Debe indicar quién devuelve el libro",
+      });
     }
 
-    // Actualizar préstamo
-    const result = await db.query(
+    const loanResult = await client.query(
+      `SELECT * FROM loans 
+       WHERE id = $1 AND status = 'ACTIVE'
+       FOR UPDATE`,
+      [id]
+    );
+
+    if (loanResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({
+        error: "Préstamo no encontrado o ya devuelto",
+      });
+    }
+
+    const loan = loanResult.rows[0];
+
+    await client.query(
       `UPDATE loans
        SET status = 'RETURNED',
            return_date = NOW(),
            returned_by = $1
-       WHERE id = $2
-       AND status = 'ACTIVE'
-       RETURNING *`,
+       WHERE id = $2`,
       [returned_by.trim(), id]
     );
 
-    if (result.rows.length === 0) {
-      console.log("❌ Préstamo no encontrado o ya devuelto");
-      return res.status(404).json({ error: "Préstamo no encontrado o ya devuelto" });
-    }
-
-    const loan = result.rows[0];
-
-    // Cambiar libro a ARCHIVED (estantería)
-    await db.query(
+    await client.query(
       `UPDATE books
-       SET status = $1
-       WHERE id_book = $2`,
-      ['ARCHIVED', loan.book_id]
+       SET status = 'ARCHIVED'
+       WHERE id_book = $1`,
+      [loan.book_id]
     );
 
-    console.log("✅ Devolución registrada correctamente");
+    await client.query("COMMIT");
 
-    res.json(loan);
+    res.json({ message: "Devolución registrada correctamente" });
 
   } catch (error) {
-    console.error("🔥 ERROR REAL CLOSELOAN:", error);
+    await client.query("ROLLBACK");
+    console.error("🔥 ERROR closeLoan:", error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+};
+
+
+// =============================
+// 🔹 Forzar regularización
+// =============================
+exports.forceArchive = async (req, res) => {
+  try {
+    const { book_id } = req.body;
+
+    if (!book_id) {
+      return res.status(400).json({
+        error: "Falta book_id",
+      });
+    }
+
+    await db.query(
+      `UPDATE books
+       SET status = 'ARCHIVED'
+       WHERE id_book = $1`,
+      [book_id]
+    );
+
+    res.json({
+      message: "Libro regularizado manualmente",
+    });
+
+  } catch (error) {
+    console.error("🔥 ERROR forceArchive:", error);
     res.status(500).json({ error: error.message });
   }
 };

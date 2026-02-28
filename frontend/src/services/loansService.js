@@ -7,7 +7,7 @@ export const createLoan = (data) => {
   return axios.post(API, data);
 };
 
-// 🔹 Cerrar préstamo
+// 🔹 Cerrar préstamo normal
 export const closeLoan = (id_loan, data) => {
   return axios.put(`${API}/close/${id_loan}`, data);
 };
@@ -15,4 +15,9 @@ export const closeLoan = (id_loan, data) => {
 // 🔹 Obtener préstamo activo por libro
 export const getActiveLoanByBook = (id_book) => {
   return axios.get(`${API}/active/${id_book}`);
+};
+
+// 🔥 Forzar regularización
+export const forceArchive = (data) => {
+  return axios.put(`${API}/force`, data);
 };
