@@ -155,16 +155,18 @@ export default function LoanModal({ book, onClose, onSuccess }) {
                 <p>
                   Prestado a: <strong>{activeLoan.person}</strong>
                 </p>
-
-                {/* 🔹 Checkbox inteligente */}
-                <label style={{ display: "block", marginBottom: "5px" }}>
+                {/* 🔹 Opción de devolución */}
+                <div className="status-toggle">
                   <input
                     type="checkbox"
+                    id="useOriginalName"
                     checked={useOriginalName}
                     onChange={() => setUseOriginalName(!useOriginalName)}
                   />
-                  Usar nombre original del préstamo
-                </label>
+                  <label htmlFor="useOriginalName">
+                    Usar nombre original del préstamo
+                  </label>
+                </div>
 
                 <input
                   type="text"
