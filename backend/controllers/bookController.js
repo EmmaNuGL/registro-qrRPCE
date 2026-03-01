@@ -1,24 +1,4 @@
-const pool = require("../config/db");
-
-/* ===============================
-   🔹 HELPER INTERNO PARA REGISTRAR MOVIMIENTOS
-================================ */
-const registerMovement = async (client, {
-  book_id,
-  user_id,
-  previous_state,
-  new_state,
-  action,
-  person,
-  observations
-}) => {
-  await client.query(
-    `INSERT INTO movements
-     (book_id, user_id, previous_state, new_state, action, person, observations)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [book_id, user_id, previous_state, new_state, action, person, observations]
-  );
-};
+const pool = require('../config/db');
 
 /* ===============================
    GET ALL BOOKS
@@ -26,7 +6,7 @@ const registerMovement = async (client, {
 const getBooks = async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM books ORDER BY created_at DESC"
+      'SELECT * FROM books ORDER BY created_at DESC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -38,11 +18,7 @@ const getBooks = async (req, res) => {
    CREATE BOOK
 ================================ */
 const createBook = async (req, res) => {
-  const client = await pool.connect();
-
   try {
-    await client.query("BEGIN");
-
     const {
       qr_code,
       volume_name,
@@ -51,11 +27,10 @@ const createBook = async (req, res) => {
       register_from,
       register_to,
       status,
-      observations,
-      user_id
+      observations
     } = req.body;
 
-    const result = await client.query(
+    const result = await pool.query(
       `INSERT INTO books
       (qr_code, volume_name, volume_number, year, register_from, register_to, status, observations)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
@@ -67,31 +42,14 @@ const createBook = async (req, res) => {
         year,
         register_from,
         register_to,
-        status || "ARCHIVED",
+        status || 'ARCHIVED',
         observations || null
       ]
     );
 
-    const newBook = result.rows[0];
-
-    await registerMovement(client, {
-      book_id: newBook.id_book,
-      user_id: user_id || null,
-      previous_state: null,
-      new_state: newBook.status,
-      action: "CREAR_LIBRO",
-      person: null,
-      observations: "Libro registrado en el sistema"
-    });
-
-    await client.query("COMMIT");
-    res.status(201).json(newBook);
-
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    await client.query("ROLLBACK");
     res.status(500).json({ error: error.message });
-  } finally {
-    client.release();
   }
 };
 
@@ -103,12 +61,12 @@ const getBookById = async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      "SELECT * FROM books WHERE id_book = $1",
+      'SELECT * FROM books WHERE id_book = $1',
       [id]
     );
 
     if (!result.rows.length) {
-      return res.status(404).json({ error: "Book not found" });
+      return res.status(404).json({ error: 'Book not found' });
     }
 
     res.json(result.rows[0]);
@@ -125,12 +83,12 @@ const getBookByQR = async (req, res) => {
     const { codigo_qr } = req.params;
 
     const result = await pool.query(
-      "SELECT * FROM books WHERE qr_code = $1",
+      'SELECT * FROM books WHERE qr_code = $1',
       [codigo_qr]
     );
 
     if (!result.rows.length) {
-      return res.status(404).json({ error: "Book not found" });
+      return res.status(404).json({ error: 'Book not found' });
     }
 
     res.json(result.rows[0]);
@@ -140,76 +98,72 @@ const getBookByQR = async (req, res) => {
 };
 
 /* ===============================
-   UPDATE BOOK
+   UPDATE BOOK STATUS (WITH MOVEMENT)
 ================================ */
-const updateBook = async (req, res) => {
+const updateBookStatus = async (req, res) => {
   const client = await pool.connect();
 
   try {
+    const { id } = req.params;
+    const { status, person, user_id, observations } = req.body;
+
     await client.query("BEGIN");
 
-    const { id } = req.params;
-    const {
-      qr_code,
-      volume_name,
-      volume_number,
-      year,
-      register_from,
-      register_to,
-      status,
-      observations,
-      user_id
-    } = req.body;
-
-    const currentBookResult = await client.query(
-      "SELECT status FROM books WHERE id_book = $1 FOR UPDATE",
+    // 1️⃣ Obtener libro actual
+    const currentBook = await client.query(
+      "SELECT * FROM books WHERE id_book = $1",
       [id]
     );
 
-    if (currentBookResult.rows.length === 0) {
+    if (!currentBook.rows.length) {
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "Book not found" });
     }
 
-    const previous_state = currentBookResult.rows[0].status;
+    const oldStatus = currentBook.rows[0].status;
 
-    const updatedBookResult = await client.query(
-      `UPDATE books SET
-        qr_code = $1,
-        volume_name = $2,
-        volume_number = $3,
-        year = $4,
-        register_from = $5,
-        register_to = $6,
-        status = $7,
-        observations = $8
-       WHERE id_book = $9
-       RETURNING *`,
+    // Si no cambia el estado, no registramos movimiento
+    if (oldStatus === status) {
+      await client.query("ROLLBACK");
+      return res.json(currentBook.rows[0]);
+    }
+
+    // 2️⃣ Actualizar estado
+    const updatedBook = await client.query(
+      "UPDATE books SET status = $1 WHERE id_book = $2 RETURNING *",
+      [status, id]
+    );
+
+    // 3️⃣ Determinar acción
+    let action = null;
+
+    if (oldStatus === "ARCHIVED" && status === "IN_USE") {
+      action = "OUT"; // Préstamo
+    }
+
+    if (oldStatus === "IN_USE" && status === "ARCHIVED") {
+      action = "IN"; // Devolución
+    }
+
+    // 4️⃣ Insertar movimiento
+    await client.query(
+      `INSERT INTO movements
+       (book_id, user_id, previous_state, new_state, action, person, observations, date_time)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
       [
-        qr_code,
-        volume_name,
-        volume_number,
-        year,
-        register_from,
-        register_to,
+        id.toString(),
+        user_id || null,
+        oldStatus,
         status,
-        observations,
-        id
+        action,
+        person || "No especificado",
+        observations || null
       ]
     );
 
-    await registerMovement(client, {
-      book_id: id,
-      user_id: user_id || null,
-      previous_state,
-      new_state: updatedBookResult.rows[0].status,
-      action: "EDITAR_LIBRO",
-      person: null,
-      observations: "Datos del libro actualizados"
-    });
-
     await client.query("COMMIT");
-    res.json(updatedBookResult.rows[0]);
+
+    res.json(updatedBook.rows[0]);
 
   } catch (error) {
     await client.query("ROLLBACK");
@@ -227,15 +181,15 @@ const deleteBook = async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      "DELETE FROM books WHERE id_book = $1 RETURNING *",
+      'DELETE FROM books WHERE id_book = $1 RETURNING *',
       [id]
     );
 
     if (!result.rows.length) {
-      return res.status(404).json({ error: "Book not found" });
+      return res.status(404).json({ error: 'Book not found' });
     }
 
-    res.json({ message: "Book deleted successfully" });
+    res.json({ message: 'Book deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -246,6 +200,6 @@ module.exports = {
   createBook,
   getBookById,
   getBookByQR,
-  updateBook,
+  updateBookStatus,
   deleteBook
 };
