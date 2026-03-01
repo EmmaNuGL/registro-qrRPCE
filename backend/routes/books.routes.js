@@ -15,7 +15,7 @@ router.get('/:id', bookController.getBookById);
 router.get('/qr/:codigo_qr', bookController.getBookByQR);
 
 // ✅ Actualizar un libro por ID
-router.put('/:id', bookController.updateBookStatus); // General update can be added if needed
+router.put('/:id', bookController.updateBook);
 
 // ✅ Eliminar un libro por ID
 router.delete('/:id', bookController.deleteBook);

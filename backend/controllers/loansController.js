@@ -1,6 +1,26 @@
 const db = require("../config/db");
 
 // =============================
+// 🔹 Helper interno para registrar movimientos
+// =============================
+const registerMovement = async (client, {
+  book_id,
+  user_id,
+  previous_state,
+  new_state,
+  action,
+  person,
+  observations
+}) => {
+  await client.query(
+    `INSERT INTO movements
+     (book_id, user_id, previous_state, new_state, action, person, observations)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [book_id, user_id, previous_state, new_state, action, person, observations]
+  );
+};
+
+// =============================
 // 🔹 Crear préstamo
 // =============================
 exports.createLoan = async (req, res) => {
@@ -9,7 +29,7 @@ exports.createLoan = async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    const { book_id, person, observations } = req.body;
+    const { book_id, person, observations, user_id } = req.body;
 
     if (!book_id || !person || !person.trim()) {
       await client.query("ROLLBACK");
@@ -28,15 +48,10 @@ exports.createLoan = async (req, res) => {
 
     const currentStatus = bookResult.rows[0].status;
 
-    if (currentStatus === "IN_USE") {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "El libro ya está prestado" });
-    }
-
     if (currentStatus !== "ARCHIVED") {
       await client.query("ROLLBACK");
       return res.status(400).json({
-        error: "Estado del libro no válido para préstamo",
+        error: "El libro no está en archivo y no puede ser prestado",
       });
     }
 
@@ -54,6 +69,16 @@ exports.createLoan = async (req, res) => {
        WHERE id_book = $1`,
       [book_id]
     );
+
+    await registerMovement(client, {
+      book_id,
+      user_id: user_id || null,
+      previous_state: currentStatus,
+      new_state: 'IN_USE',
+      action: 'PRESTAR',
+      person: person.trim(),
+      observations: observations || 'Préstamo registrado'
+    });
 
     await client.query("COMMIT");
 
@@ -105,7 +130,7 @@ exports.closeLoan = async (req, res) => {
     await client.query("BEGIN");
 
     const { id } = req.params;
-    const { returned_by } = req.body;
+    const { returned_by, user_id } = req.body;
 
     if (!returned_by || !returned_by.trim()) {
       await client.query("ROLLBACK");
@@ -130,6 +155,12 @@ exports.closeLoan = async (req, res) => {
 
     const loan = loanResult.rows[0];
 
+    const bookRes = await client.query(
+      `SELECT status FROM books WHERE id_book = $1 FOR UPDATE`,
+      [loan.book_id]
+    );
+    const previous_state = bookRes.rows[0]?.status || 'UNKNOWN';
+
     await client.query(
       `UPDATE loans
        SET status = 'RETURNED',
@@ -145,6 +176,16 @@ exports.closeLoan = async (req, res) => {
        WHERE id_book = $1`,
       [loan.book_id]
     );
+
+    await registerMovement(client, {
+      book_id: loan.book_id,
+      user_id: user_id || null,
+      previous_state: previous_state,
+      new_state: 'ARCHIVED',
+      action: 'DEVOLVER',
+      person: returned_by.trim(),
+      observations: 'Devolución registrada'
+    });
 
     await client.query("COMMIT");
 
@@ -164,29 +205,55 @@ exports.closeLoan = async (req, res) => {
 // 🔹 Forzar regularización
 // =============================
 exports.forceArchive = async (req, res) => {
+  const client = await db.connect();
+
   try {
-    const { book_id } = req.body;
+    await client.query("BEGIN");
+
+    const { book_id, user_id } = req.body;
 
     if (!book_id) {
+      await client.query("ROLLBACK");
       return res.status(400).json({
         error: "Falta book_id",
       });
     }
 
-    await db.query(
+    const bookRes = await client.query(
+      'SELECT status FROM books WHERE id_book = $1 FOR UPDATE',
+      [book_id]
+    );
+    const previous_state = bookRes.rows.length ? bookRes.rows[0].status : 'ARCHIVED';
+
+    await client.query(
       `UPDATE books
        SET status = 'ARCHIVED'
        WHERE id_book = $1`,
       [book_id]
     );
 
+    await registerMovement(client, {
+      book_id,
+      user_id: user_id || null,
+      previous_state: previous_state,
+      new_state: 'ARCHIVED',
+      action: 'EDITAR_LIBRO',
+      person: 'Admin',
+      observations: 'Regularización manual'
+    });
+
+    await client.query("COMMIT");
+
     res.json({
       message: "Libro regularizado manualmente",
     });
 
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("🔥 ERROR forceArchive:", error);
     res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
   }
 };
 
