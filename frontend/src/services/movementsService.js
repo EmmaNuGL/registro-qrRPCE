@@ -1,12 +1,12 @@
 import api from "./api";
 
 // Obtener todos los movimientos
-export const getMovements = () => api.get("/movimientos");
+export const getMovements = () => api.get("/movements");
 
 // Obtener últimos movimientos
 export const getRecentMovements = (limit = 5) =>
-  api.get(`/movimientos?limit=${limit}`);
+  api.get(`/movements?limit=${limit}`);
 
-// ✅ CREAR MOVIMIENTO (FALTABA)
+// Crear movimiento
 export const createMovement = (data) =>
-  api.post("/movimientos", data);
+  api.post("/movements", data);
