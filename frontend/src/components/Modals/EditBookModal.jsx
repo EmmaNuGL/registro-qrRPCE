@@ -3,30 +3,52 @@ import QRCode from "qrcode";
 import generateQRData from "../../utils/generateQRData";
 
 export default function EditBookModal({ show, book, onClose, onSave }) {
+
   const [formData, setFormData] = useState({
-    id: "",
+    id_book: "",
     year: "",
     tome: "",
     tomeNumber: "",
     registryFrom: "",
     registryTo: "",
-    status: "En archivos",
-    notes: "",
+    status: "ARCHIVED",
+    notes: ""
   });
 
   const [qrPreview, setQrPreview] = useState("");
 
-  // 🧩 Cargar datos del libro seleccionado
+  // ===============================
+  // CARGAR DATOS DEL LIBRO
+  // ===============================
   useEffect(() => {
-    if (book) {
-      setFormData(book);
-      generateQRPreview(book);
-    }
+
+    if (!book) return;
+
+    const mappedData = {
+      id_book: book.id_book,
+      year: book.year || "",
+      tome: book.volume_name || "",
+      tomeNumber: book.volume_number || "",
+      registryFrom: book.register_from || "",
+      registryTo: book.register_to || "",
+      status: book.status || "ARCHIVED",
+      notes: book.observations || ""
+    };
+
+    setFormData(mappedData);
+
+    generateQRPreview(mappedData);
+
   }, [book]);
 
-  // 🔁 Generar vista previa del QR dinámicamente
+
+  // ===============================
+  // GENERAR QR
+  // ===============================
   async function generateQRPreview(data) {
+
     try {
+
       const qrText = generateQRData(
         data.year,
         data.tome,
@@ -34,105 +56,136 @@ export default function EditBookModal({ show, book, onClose, onSave }) {
         data.registryTo
       );
 
-      if (typeof qrText === "string" && qrText.trim() !== "") {
-        const dataUrl = await QRCode.toDataURL(String(qrText));
-        setQrPreview(dataUrl);
+      if (qrText) {
+        const url = await QRCode.toDataURL(String(qrText));
+        setQrPreview(url);
       } else {
         setQrPreview("");
       }
+
     } catch (err) {
+
       console.error("Error generando QR:", err);
       setQrPreview("");
+
     }
   }
 
-  // 🔄 Manejar cambios de campos
+
+  // ===============================
+  // CAMBIOS DE FORMULARIO
+  // ===============================
   const handleChange = (e) => {
+
     const { id, value } = e.target;
-    const updated = { ...formData, [id]: value };
+
+    const updated = {
+      ...formData,
+      [id]: value
+    };
+
     setFormData(updated);
+
     generateQRPreview(updated);
+
   };
 
-  // 💾 Guardar cambios
+
+  // ===============================
+  // GUARDAR
+  // ===============================
   const handleSubmit = (e) => {
+
     e.preventDefault();
 
     const { year, tome, registryFrom, registryTo } = formData;
 
-    // Validaciones básicas
     if (!year || !tome || !registryFrom || !registryTo) {
-      alert("⚠️ Todos los campos principales son obligatorios.");
+
+      alert("⚠️ Todos los campos principales son obligatorios");
       return;
+
     }
 
-    // Validar rango numérico
-    const isNumFrom = registryFrom !== "s/n" && !isNaN(registryFrom);
-    const isNumTo = registryTo !== "s/n" && !isNaN(registryTo);
-
-    if (isNumFrom && isNumTo && parseInt(registryFrom) > parseInt(registryTo)) {
-      alert("❌ El registro 'Desde' debe ser menor o igual al 'Hasta'.");
-      return;
-    }
-
-    // Generar nuevo código QR
     const qr = `${year}-${tome}-${registryFrom}-${registryTo}`;
 
-    onSave({ ...formData, qr });
+    const payload = {
+
+      id_book: formData.id_book,
+      year: formData.year,
+      volume_name: formData.tome,
+      volume_number: formData.tomeNumber || null,
+      register_from: formData.registryFrom,
+      register_to: formData.registryTo,
+      status: formData.status,
+      observations: formData.notes || null,
+      qr_code: qr
+
+    };
+
+    onSave(payload);
+
     onClose();
+
   };
+
 
   if (!show) return null;
 
-  // 🪟 Modal principal
+
   return (
+
     <div className="modal-overlay active">
+
       <div className="modal-content">
+
         <h3>✏️ Editar Libro de Registro</h3>
+
         <form onSubmit={handleSubmit}>
-          {/* Año */}
+
           <div className="form-group">
-            <label>Año (puede ser rango: ej. "1920 - 1925")</label>
+            <label>Año</label>
             <input
               id="year"
               type="text"
               className="form-input"
-              placeholder="Ej: 1920 o 1920 - 1925"
               value={formData.year}
               onChange={handleChange}
               required
             />
           </div>
 
-          {/* Tomo y número */}
+
           <div className="form-row">
+
             <div className="form-group">
               <label>Nombre del Tomo</label>
               <input
                 id="tome"
                 type="text"
                 className="form-input"
-                placeholder="Ej: Tomo I, Tomo A"
                 value={formData.tome}
                 onChange={handleChange}
                 required
               />
             </div>
+
             <div className="form-group">
-              <label>Número de Tomo (opcional)</label>
+              <label>Número de Tomo</label>
               <input
                 id="tomeNumber"
-                type="number"
+                type="text"
                 className="form-input"
-                placeholder="Ej: 1, 2, 3"
                 value={formData.tomeNumber || ""}
                 onChange={handleChange}
               />
             </div>
+
           </div>
 
-          {/* Registros */}
+
           <div className="form-row">
+
             <div className="form-group">
               <label>Registro Desde</label>
               <input
@@ -144,6 +197,7 @@ export default function EditBookModal({ show, book, onClose, onSave }) {
                 required
               />
             </div>
+
             <div className="form-group">
               <label>Registro Hasta</label>
               <input
@@ -155,23 +209,26 @@ export default function EditBookModal({ show, book, onClose, onSave }) {
                 required
               />
             </div>
+
           </div>
 
-          {/* Estado */}
+
           <div className="form-group">
             <label>Estado</label>
+
             <select
               id="status"
               className="form-select"
               value={formData.status}
               onChange={handleChange}
             >
-              <option value="En archivos">En archivos</option>
-              <option value="En uso">En uso</option>
+              <option value="ARCHIVED">En archivo</option>
+              <option value="IN_USE">En uso</option>
             </select>
+
           </div>
 
-          {/* Notas */}
+
           <div className="form-group">
             <label>Observaciones</label>
             <textarea
@@ -183,25 +240,28 @@ export default function EditBookModal({ show, book, onClose, onSave }) {
             />
           </div>
 
-          {/* Vista previa QR */}
+
           {qrPreview && (
-            <div className="qr-preview" style={{ textAlign: "center", margin: "1rem 0" }}>
+
+            <div className="qr-preview" style={{textAlign:"center", margin:"1rem 0"}}>
+
               <img
                 src={qrPreview}
-                alt="Código QR"
-                style={{ width: "160px", height: "160px", borderRadius: "10px" }}
+                alt="QR"
+                style={{width:"160px"}}
               />
-              <p style={{ fontSize: "0.85rem", color: "#555" }}>
-                Vista previa del nuevo QR
-              </p>
+
             </div>
+
           )}
 
-          {/* Botones de acción */}
+
           <div className="action-buttons">
+
             <button type="submit" className="btn btn-primary">
               💾 Guardar Cambios
             </button>
+
             <button
               type="button"
               className="btn btn-secondary"
@@ -209,9 +269,15 @@ export default function EditBookModal({ show, book, onClose, onSave }) {
             >
               ❌ Cancelar
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </div>
+
   );
+
 }

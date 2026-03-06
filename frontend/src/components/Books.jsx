@@ -71,18 +71,25 @@ export default function Books() {
   // ➕ AGREGAR LIBRO
   // ===============================
   const handleAddBook = async (newBook) => {
+
     try {
 
       const res = await createBook(newBook);
 
       setBooks((prev) => [res.data, ...prev]);
 
-      setShowAddModal(false); // 🔥 cerrar modal automáticamente
+      setShowAddModal(false);
 
       alert("✅ Libro guardado correctamente");
 
     } catch (err) {
-      alert(err.response?.data?.error || "❌ Error al guardar libro");
+
+      console.error("Error al crear libro:", err);
+
+      alert(
+        err.response?.data?.error ||
+        "❌ Error al guardar libro"
+      );
     }
   };
 
@@ -90,6 +97,9 @@ export default function Books() {
   // ✏️ EDITAR
   // ===============================
   const handleEdit = (book) => {
+
+    console.log("Libro seleccionado para editar:", book);
+
     setSelectedBook(book);
     setShowEditModal(true);
   };
@@ -97,6 +107,13 @@ export default function Books() {
   const handleSaveEdit = async (updatedBook) => {
 
     try {
+
+      if (!updatedBook.id_book) {
+        alert("❌ Error: el libro no tiene ID");
+        return;
+      }
+
+      console.log("Enviando actualización:", updatedBook);
 
       const res = await updateBook(updatedBook.id_book, updatedBook);
 
@@ -108,8 +125,16 @@ export default function Books() {
 
       setShowEditModal(false);
 
-    } catch {
-      alert("❌ Error al actualizar libro");
+      alert("✅ Libro actualizado correctamente");
+
+    } catch (err) {
+
+      console.error("Error actualizando libro:", err);
+
+      alert(
+        err.response?.data?.error ||
+        "❌ Error al actualizar libro"
+      );
     }
   };
 
@@ -128,7 +153,12 @@ export default function Books() {
         prev.filter((b) => b.id_book !== id)
       );
 
-    } catch {
+      alert("🗑️ Libro eliminado");
+
+    } catch (err) {
+
+      console.error("Error eliminando libro:", err);
+
       alert("❌ Error al eliminar");
     }
   };
@@ -271,7 +301,7 @@ export default function Books() {
       )}
 
       {/* 🔹 MODAL EDITAR */}
-      {showEditModal && (
+      {showEditModal && selectedBook && (
         <EditBookModal
           show={showEditModal}
           book={selectedBook}

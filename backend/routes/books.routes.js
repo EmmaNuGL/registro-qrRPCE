@@ -2,22 +2,40 @@ const express = require('express');
 const router = express.Router();
 const bookController = require('../controllers/bookController');
 
-// ✅ Obtener todos los libros
+// ===============================
+// 📚 OBTENER TODOS LOS LIBROS
+// ===============================
 router.get('/', bookController.getBooks);
 
-// ✅ Crear un nuevo libro (con validación previa)
+// ===============================
+// ➕ CREAR NUEVO LIBRO
+// ===============================
 router.post('/', bookController.createBook);
 
-// ✅ Obtener un libro por ID
-router.get('/:id', bookController.getBookById);
-
-// ✅ Obtener un libro por QR
+// ===============================
+// 🔍 OBTENER LIBRO POR QR
+// ⚠️ IMPORTANTE: VA ANTES DE /:id
+// ===============================
 router.get('/qr/:codigo_qr', bookController.getBookByQR);
 
-// ✅ Actualizar un libro por ID
-router.put('/:id', bookController.updateBookStatus); // General update can be added if needed
+// ===============================
+// 🔍 OBTENER LIBRO POR ID
+// ===============================
+router.get('/:id', bookController.getBookById);
 
-// ✅ Eliminar un libro por ID
+// ===============================
+// ✏️ EDITAR DATOS DEL LIBRO
+// ===============================
+router.put('/:id', bookController.updateBook);
+
+// ===============================
+// 🔄 CAMBIAR ESTADO (PRÉSTAMO / DEVOLUCIÓN)
+// ===============================
+router.patch('/:id/status', bookController.updateBookStatus);
+
+// ===============================
+// 🗑️ ELIMINAR LIBRO
+// ===============================
 router.delete('/:id', bookController.deleteBook);
 
 module.exports = router;

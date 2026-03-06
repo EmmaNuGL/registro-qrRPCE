@@ -48,6 +48,7 @@ const createBook = async (req, res) => {
     );
 
     res.status(201).json(result.rows[0]);
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -58,6 +59,7 @@ const createBook = async (req, res) => {
 ================================ */
 const getBookById = async (req, res) => {
   try {
+
     const { id } = req.params;
 
     const result = await pool.query(
@@ -70,6 +72,7 @@ const getBookById = async (req, res) => {
     }
 
     res.json(result.rows[0]);
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -80,6 +83,7 @@ const getBookById = async (req, res) => {
 ================================ */
 const getBookByQR = async (req, res) => {
   try {
+
     const { codigo_qr } = req.params;
 
     const result = await pool.query(
@@ -92,6 +96,64 @@ const getBookByQR = async (req, res) => {
     }
 
     res.json(result.rows[0]);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/* ===============================
+   UPDATE BOOK (EDIT DETAILS)
+   🔥 NUEVA FUNCIÓN
+================================ */
+const updateBook = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    const {
+      qr_code,
+      volume_name,
+      volume_number,
+      year,
+      register_from,
+      register_to,
+      status,
+      observations
+    } = req.body;
+
+    const result = await pool.query(
+      `UPDATE books
+       SET
+         qr_code = $1,
+         volume_name = $2,
+         volume_number = $3,
+         year = $4,
+         register_from = $5,
+         register_to = $6,
+         status = $7,
+         observations = $8
+       WHERE id_book = $9
+       RETURNING *`,
+      [
+        qr_code,
+        volume_name,
+        volume_number || null,
+        year,
+        register_from,
+        register_to,
+        status,
+        observations || null,
+        id
+      ]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    res.json(result.rows[0]);
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -101,9 +163,11 @@ const getBookByQR = async (req, res) => {
    UPDATE BOOK STATUS (WITH MOVEMENT)
 ================================ */
 const updateBookStatus = async (req, res) => {
+
   const client = await pool.connect();
 
   try {
+
     const { id } = req.params;
     const { status, person, user_id, observations } = req.body;
 
@@ -138,11 +202,11 @@ const updateBookStatus = async (req, res) => {
     let action = null;
 
     if (oldStatus === "ARCHIVED" && status === "IN_USE") {
-      action = "OUT"; // Préstamo
+      action = "OUT";
     }
 
     if (oldStatus === "IN_USE" && status === "ARCHIVED") {
-      action = "IN"; // Devolución
+      action = "IN";
     }
 
     // 4️⃣ Insertar movimiento
@@ -166,10 +230,14 @@ const updateBookStatus = async (req, res) => {
     res.json(updatedBook.rows[0]);
 
   } catch (error) {
+
     await client.query("ROLLBACK");
     res.status(500).json({ error: error.message });
+
   } finally {
+
     client.release();
+
   }
 };
 
@@ -178,6 +246,7 @@ const updateBookStatus = async (req, res) => {
 ================================ */
 const deleteBook = async (req, res) => {
   try {
+
     const { id } = req.params;
 
     const result = await pool.query(
@@ -190,6 +259,7 @@ const deleteBook = async (req, res) => {
     }
 
     res.json({ message: 'Book deleted successfully' });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -200,6 +270,7 @@ module.exports = {
   createBook,
   getBookById,
   getBookByQR,
+  updateBook,        // 🔥 NUEVO
   updateBookStatus,
   deleteBook
 };
