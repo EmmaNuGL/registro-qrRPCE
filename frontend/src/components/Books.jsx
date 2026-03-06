@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import AddBookModal from "./modals/AddBookModal";
-import EditBookModal from "./modals/EditBookModal";
-import ViewQRModal from "./modals/ViewQRModal";
+import AddBookModal from "./Modals/AddBookModal";
+import EditBookModal from "./Modals/EditBookModal";
+import ViewQRModal from "./Modals/ViewQRModal";
 import LoanModal from "./Modals/LoanModal";
 
 import {
@@ -12,14 +12,17 @@ import {
 } from "../services/booksService";
 
 export default function Books() {
+
   const [books, setBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
   const [selectedBook, setSelectedBook] = useState(null);
   const [viewingBook, setViewingBook] = useState(null);
-  const [loanBook, setLoanBook] = useState(null); // 🔹 NUEVO
+  const [loanBook, setLoanBook] = useState(null);
 
   // ===============================
   // 🔹 CARGA INICIAL
@@ -41,6 +44,7 @@ export default function Books() {
   // 🔍 FILTRO AVANZADO
   // ===============================
   const filteredBooks = books.filter((b) => {
+
     const term = searchTerm.toLowerCase();
 
     const matchVolume = b.volume_name?.toLowerCase().includes(term);
@@ -64,13 +68,19 @@ export default function Books() {
   });
 
   // ===============================
-  // ➕ AGREGAR
+  // ➕ AGREGAR LIBRO
   // ===============================
   const handleAddBook = async (newBook) => {
     try {
+
       const res = await createBook(newBook);
-      setBooks([res.data, ...books]);
+
+      setBooks((prev) => [res.data, ...prev]);
+
+      setShowAddModal(false); // 🔥 cerrar modal automáticamente
+
       alert("✅ Libro guardado correctamente");
+
     } catch (err) {
       alert(err.response?.data?.error || "❌ Error al guardar libro");
     }
@@ -85,13 +95,19 @@ export default function Books() {
   };
 
   const handleSaveEdit = async (updatedBook) => {
+
     try {
+
       const res = await updateBook(updatedBook.id_book, updatedBook);
-      setBooks(
-        books.map((b) =>
+
+      setBooks((prev) =>
+        prev.map((b) =>
           b.id_book === res.data.id_book ? res.data : b
         )
       );
+
+      setShowEditModal(false);
+
     } catch {
       alert("❌ Error al actualizar libro");
     }
@@ -101,10 +117,17 @@ export default function Books() {
   // 🗑️ ELIMINAR
   // ===============================
   const handleDelete = async (id) => {
+
     if (!window.confirm("¿Eliminar este libro?")) return;
+
     try {
+
       await deleteBook(id);
-      setBooks(books.filter((b) => b.id_book !== id));
+
+      setBooks((prev) =>
+        prev.filter((b) => b.id_book !== id)
+      );
+
     } catch {
       alert("❌ Error al eliminar");
     }
@@ -114,8 +137,11 @@ export default function Books() {
   // 📦 UI
   // ===============================
   return (
+
     <div className="books-container">
+
       <div className="books-toolbar">
+
         <input
           type="text"
           placeholder="Buscar por tomo, año o número de registro..."
@@ -133,49 +159,71 @@ export default function Books() {
         </select>
 
         <span>📚 {filteredBooks.length} libros</span>
+
       </div>
 
       <div className="action-buttons">
-        <button className="btn-add" onClick={() => setShowAddModal(true)}>
+
+        <button
+          className="btn-add"
+          onClick={() => setShowAddModal(true)}
+        >
           ➕ Agregar libro
         </button>
+
         <button
           className="btn-vista"
           onClick={() => (window.location.href = "/admin/biblioteca-2d")}
         >
           📚 Vista Biblioteca 2D
         </button>
+
         <button className="btn-export">
           📤 Exportar Lista
         </button>
+
         <button className="btn-qr">
           🏷️ Exportar Etiquetas QR
         </button>
+
       </div>
 
       <div className="books-grid">
+
         {filteredBooks.length ? (
+
           filteredBooks.map((b) => (
+
             <div
               key={b.id_book}
               className={`book-card ${
                 b.status === "IN_USE" ? "status-uso" : "status-archivo"
               }`}
             >
+
               <h3>
                 {b.volume_name} <small>Tomo {b.volume_number}</small>
               </h3>
 
-              <p><strong>Registro:</strong> {b.register_from} – {b.register_to}</p>
-              <p><strong>Año:</strong> {b.year}</p>
+              <p>
+                <strong>Registro:</strong> {b.register_from} – {b.register_to}
+              </p>
+
+              <p>
+                <strong>Año:</strong> {b.year}
+              </p>
 
               {b.observations && (
-                <p><strong>Obs:</strong> {b.observations}</p>
+                <p>
+                  <strong>Obs:</strong> {b.observations}
+                </p>
               )}
 
               <p>
                 <strong>Estado:</strong>{" "}
-                {b.status === "ARCHIVED" ? "📦 En archivo" : "📖 En uso"}
+                {b.status === "ARCHIVED"
+                  ? "📦 En archivo"
+                  : "📖 En uso"}
               </p>
 
               <p className="date">
@@ -184,31 +232,55 @@ export default function Books() {
               </p>
 
               <div className="book-actions">
-                <button onClick={() => setLoanBook(b)}>🔄</button>
-                <button onClick={() => setViewingBook(b)}>🔍 QR</button>
-                <button onClick={() => handleEdit(b)}>✏️</button>
-                <button onClick={() => handleDelete(b.id_book)}>🗑️</button>
+
+                <button onClick={() => setLoanBook(b)}>
+                  🔄
+                </button>
+
+                <button onClick={() => setViewingBook(b)}>
+                  🔍 QR
+                </button>
+
+                <button onClick={() => handleEdit(b)}>
+                  ✏️
+                </button>
+
+                <button onClick={() => handleDelete(b.id_book)}>
+                  🗑️
+                </button>
+
               </div>
+
             </div>
+
           ))
+
         ) : (
           <p>No hay libros registrados</p>
         )}
+
       </div>
 
-      <AddBookModal
-        show={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSave={handleAddBook}
-      />
+      {/* 🔹 MODAL AGREGAR */}
+      {showAddModal && (
+        <AddBookModal
+          show={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleAddBook}
+        />
+      )}
 
-      <EditBookModal
-        show={showEditModal}
-        book={selectedBook}
-        onClose={() => setShowEditModal(false)}
-        onSave={handleSaveEdit}
-      />
+      {/* 🔹 MODAL EDITAR */}
+      {showEditModal && (
+        <EditBookModal
+          show={showEditModal}
+          book={selectedBook}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleSaveEdit}
+        />
+      )}
 
+      {/* 🔹 VER QR */}
       {viewingBook && (
         <ViewQRModal
           book={viewingBook}
@@ -216,7 +288,7 @@ export default function Books() {
         />
       )}
 
-      {/* 🔥 MODAL DE PRÉSTAMO / DEVOLUCIÓN */}
+      {/* 🔥 MODAL PRÉSTAMO / DEVOLUCIÓN */}
       {loanBook && (
         <LoanModal
           book={loanBook}
@@ -224,6 +296,7 @@ export default function Books() {
           onSuccess={loadBooks}
         />
       )}
+
     </div>
   );
 }

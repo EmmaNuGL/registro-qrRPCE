@@ -8,7 +8,7 @@ export default function AddBookModal({ show, onClose, onSave }) {
     tomeNumber: "",
     registryFrom: "",
     registryTo: "",
-    status: "En archivos",
+    status: "ARCHIVED",
     notes: "",
   });
 
@@ -44,19 +44,32 @@ export default function AddBookModal({ show, onClose, onSave }) {
 
   // Guardar libro
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!qrData) {
-      alert("⚠️ Genera el código QR antes de guardar");
-      return;
-    }
-    onSave({ ...formData, qr: qrData });
-    onClose();
+  e.preventDefault();
+
+  if (!qrData) {
+    alert("⚠️ Genera el código QR antes de guardar");
+    return;
+  }
+
+  const payload = {
+    qr_code: qrData,
+    volume_name: formData.tome,
+    volume_number: formData.tomeNumber || null,
+    year: formData.year,
+    register_from: formData.registryFrom,
+    register_to: formData.registryTo,
+    status: formData.status,
+    observations: formData.notes || null,
   };
+
+  onSave(payload);
+  onClose();
+};
 
   if (!show) return null;
 
   return (
-    <div className="modal active">
+    <div className="modal-overlay active"> {/* 🔧 CORRECCIÓN AQUÍ */}
       <div className="modal-content">
         <h3>Agregar Nuevo Libro de Registro</h3>
 
@@ -135,8 +148,8 @@ export default function AddBookModal({ show, onClose, onSave }) {
               value={formData.status}
               onChange={handleChange}
             >
-              <option value="En archivos">En archivos</option>
-              <option value="En uso">En uso</option>
+              <option value="ARCHIVED">En archivos</option>
+              <option value="IN_USE">En uso</option>
             </select>
           </div>
 
@@ -156,7 +169,7 @@ export default function AddBookModal({ show, onClose, onSave }) {
           {showQR && (
             <div id="qrCanvasModal" className="qr-display">
               <h4>Vista previa del QR:</h4>
-              <QRCodeCanvas value={qrData} size={160} /> {/* ✅ Componente corregido */}
+              <QRCodeCanvas value={qrData} size={160} />
               <p>
                 <strong>Código:</strong>{" "}
                 <span className="qr-data">{qrData}</span>
@@ -195,4 +208,3 @@ export default function AddBookModal({ show, onClose, onSave }) {
     </div>
   );
 }
-
