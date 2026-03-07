@@ -6,24 +6,44 @@ const pool = require('../config/db');
 const getMovements = async (req, res) => {
   try {
 
-    const result = await pool.query(`
+    const { limit } = req.query;
+
+    let query = `
       SELECT 
-        m.*,
+        m.id,
+        m.book_id,
+        m.previous_state,
+        m.new_state,
+        m.action,
+        m.person,
+        m.observations,
+        m.date_time,
         b.volume_name,
         b.qr_code,
         u.name AS user_name
       FROM movements m
       JOIN books b ON m.book_id = b.id_book
-      LEFT JOIN users u ON m.user_id = u.id
+      LEFT JOIN users u ON m.user_id = u.id_user
       ORDER BY m.date_time DESC
-    `);
+    `;
+
+    const values = [];
+
+    if (limit) {
+      query += ` LIMIT $1`;
+      values.push(limit);
+    }
+
+    const result = await pool.query(query, values);
 
     res.json(result.rows);
 
   } catch (error) {
+    console.error("🔥 ERROR getMovements:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 /* ===============================
    CREATE MOVEMENT
@@ -61,6 +81,7 @@ const createMovement = async (req, res) => {
     res.status(201).json(result.rows[0]);
 
   } catch (error) {
+    console.error("🔥 ERROR createMovement:", error);
     res.status(500).json({ error: error.message });
   }
 

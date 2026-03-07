@@ -10,9 +10,6 @@ export default function Historial() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("ALL");
 
-  /* =====================
-     📥 LOAD HISTORY
-  ===================== */
   useEffect(() => {
     loadHistory();
   }, []);
@@ -20,7 +17,11 @@ export default function Historial() {
   const loadHistory = async () => {
     try {
       const res = await getMovements();
-      setHistory(res.data || []);
+      setHistory(
+        (res.data || []).sort(
+          (a, b) => new Date(b.date_time) - new Date(a.date_time)
+        )
+      );
     } catch (error) {
       console.error("❌ Error loading history:", error);
     }
@@ -34,12 +35,14 @@ export default function Historial() {
     const text = `
       ${h.qr_code || ""}
       ${h.volume_name || ""}
+      ${h.person || ""}
       ${h.user_name || ""}
     `.toLowerCase();
 
     const textMatch = text.includes(searchTerm.toLowerCase());
+
     const typeMatch =
-      filter === "ALL" || h.tipo_movimiento === filter;
+      filter === "ALL" || h.action === filter;
 
     return textMatch && typeMatch;
 
@@ -54,11 +57,11 @@ export default function Historial() {
       "Código QR": h.qr_code,
       "Tomo": h.volume_name,
       "Movimiento":
-        h.tipo_movimiento === "OUT"
+        h.action === "Retiro"
           ? "Préstamo"
           : "Devolución",
-      "Persona": h.user_name || "—",
-      "Observaciones": h.observacion || "",
+      "Persona": h.person || h.user_name || "—",
+      "Observaciones": h.observations || "",
       "Fecha": new Date(h.date_time).toLocaleString("es-ES"),
     }));
 
@@ -82,11 +85,11 @@ export default function Historial() {
     const tableData = filteredHistory.map((h) => [
       h.qr_code,
       h.volume_name,
-      h.tipo_movimiento === "OUT"
+      h.action === "Retiro"
         ? "Préstamo"
         : "Devolución",
-      h.user_name || "—",
-      h.observacion || "—",
+      h.person || h.user_name || "—",
+      h.observations || "—",
       new Date(h.date_time).toLocaleString("es-ES"),
     ]);
 
@@ -115,8 +118,6 @@ export default function Historial() {
 
       <h2>📜 Historial de Movimientos</h2>
 
-      {/* FILTER BAR */}
-
       <div className="filter-bar">
 
         <input
@@ -131,27 +132,19 @@ export default function Historial() {
           onChange={(e) => setFilter(e.target.value)}
         >
           <option value="ALL">Todos</option>
-          <option value="OUT">📤 Préstamos</option>
-          <option value="IN">📥 Devoluciones</option>
+          <option value="Retiro">📤 Préstamos</option>
+          <option value="Devolución">📥 Devoluciones</option>
         </select>
 
-        <button
-          onClick={exportToExcel}
-          className="btn btn-success"
-        >
+        <button onClick={exportToExcel} className="btn btn-success">
           📗 Excel
         </button>
 
-        <button
-          onClick={exportToPDF}
-          className="btn btn-danger"
-        >
+        <button onClick={exportToPDF} className="btn btn-danger">
           📄 PDF
         </button>
 
       </div>
-
-      {/* TABLE */}
 
       <div className="historial-table">
 
@@ -183,11 +176,11 @@ export default function Historial() {
               filteredHistory.map((h, i) => (
 
                 <tr
-                  key={h.id_movement || i}
+                  key={h.id || i}
                   className={
-                    h.tipo_movimiento === "OUT"
+                    h.action === "Retiro"
                       ? "row-loan"
-                      : h.tipo_movimiento === "IN"
+                      : h.action === "Devolución"
                       ? "row-return"
                       : ""
                   }
@@ -198,14 +191,14 @@ export default function Historial() {
                   <td>{h.volume_name}</td>
 
                   <td>
-                    {h.tipo_movimiento === "OUT"
+                    {h.action === "Retiro"
                       ? "📤 Préstamo"
                       : "📥 Devolución"}
                   </td>
 
-                  <td>{h.user_name || "—"}</td>
+                  <td>{h.person || h.user_name || "—"}</td>
 
-                  <td>{h.observacion || "—"}</td>
+                  <td>{h.observations || "—"}</td>
 
                   <td>
                     {new Date(h.date_time).toLocaleString("es-ES")}

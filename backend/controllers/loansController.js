@@ -55,6 +55,18 @@ exports.createLoan = async (req, res) => {
       [book_id]
     );
 
+    // 🔥 REGISTRAR MOVIMIENTO (RETIRO)
+    await client.query(
+      `INSERT INTO movements
+      (book_id, previous_state, new_state, action, person, observations, date_time)
+      VALUES ($1,'ARCHIVED','IN_USE','Retiro',$2,$3,NOW())`,
+      [
+        book_id,
+        person.trim(),
+        observations || "Préstamo del libro"
+      ]
+    );
+
     await client.query("COMMIT");
 
     res.json(loanResult.rows[0]);
@@ -96,7 +108,7 @@ exports.getActiveLoanByBook = async (req, res) => {
 
 
 // =============================
-// 🔹 Cerrar préstamo normal
+// 🔹 Cerrar préstamo (devolución)
 // =============================
 exports.closeLoan = async (req, res) => {
   const client = await db.connect();
@@ -105,7 +117,7 @@ exports.closeLoan = async (req, res) => {
     await client.query("BEGIN");
 
     const { id } = req.params;
-    const { returned_by } = req.body;
+    const { returned_by, observations } = req.body;
 
     if (!returned_by || !returned_by.trim()) {
       await client.query("ROLLBACK");
@@ -144,6 +156,18 @@ exports.closeLoan = async (req, res) => {
        SET status = 'ARCHIVED'
        WHERE id_book = $1`,
       [loan.book_id]
+    );
+
+    // 🔥 REGISTRAR MOVIMIENTO (DEVOLUCIÓN)
+    await client.query(
+      `INSERT INTO movements
+      (book_id, previous_state, new_state, action, person, observations, date_time)
+      VALUES ($1,'IN_USE','ARCHIVED','Devolución',$2,$3,NOW())`,
+      [
+        loan.book_id,
+        returned_by.trim(),
+        observations || "Devolución del libro"
+      ]
     );
 
     await client.query("COMMIT");
